@@ -1,21 +1,21 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.8)
 
 set(Darknet_MAJOR_VERSION 0)
 set(Darknet_MINOR_VERSION 2)
 set(Darknet_PATCH_VERSION 5)
-set(Darknet_TWEAK_VERSION 2)
+set(Darknet_TWEAK_VERSION 1)
 set(Darknet_VERSION ${Darknet_MAJOR_VERSION}.${Darknet_MINOR_VERSION}.${Darknet_PATCH_VERSION}.${Darknet_TWEAK_VERSION})
 
 option(CMAKE_VERBOSE_MAKEFILE "Create verbose makefile" OFF)
 option(CUDA_VERBOSE_BUILD "Create verbose CUDA build" OFF)
-option(BUILD_SHARED_LIBS "Create dark as a shared library" ON)
+option(BUILD_SHARED_LIBS "Create dark as a shared library" OFF)
 option(BUILD_AS_CPP "Build Darknet using C++ compiler also for C files" OFF)
 option(BUILD_USELIB_TRACK "Build uselib_track" ON)
 option(MANUALLY_EXPORT_TRACK_OPTFLOW "Manually export the TRACK_OPTFLOW=1 define" OFF)
 option(ENABLE_OPENCV "Enable OpenCV integration" ON)
 option(ENABLE_CUDA "Enable CUDA support" ON)
-option(ENABLE_CUDNN "Enable CUDNN" ON)
-option(ENABLE_CUDNN_HALF "Enable CUDNN Half precision" ON)
+option(ENABLE_CUDNN "Enable CUDNN" OFF)
+option(ENABLE_CUDNN_HALF "Enable CUDNN Half precision" OFF)
 option(ENABLE_ZED_CAMERA "Enable ZED Camera support" ON)
 option(ENABLE_VCPKG_INTEGRATION "Enable VCPKG integration" ON)
 
@@ -39,16 +39,6 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
 
-set(default_build_type "Release")
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
-      STRING "Choose the type of build." FORCE)
-  # Set the possible values of build type for cmake-gui
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
-
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}" CACHE PATH "Install prefix" FORCE)
 endif()
@@ -58,28 +48,31 @@ set(INSTALL_LIB_DIR      "${CMAKE_CURRENT_LIST_DIR}" CACHE PATH "Path where lib 
 set(INSTALL_INCLUDE_DIR  "include/darknet"           CACHE PATH "Path where headers will be installed")
 set(INSTALL_CMAKE_DIR    "share/darknet"             CACHE PATH "Path where cmake configs will be installed")
 
-include(CheckLanguage)
-check_language(CUDA)
-if(CMAKE_CUDA_COMPILER AND ENABLE_CUDA)
-  set(CUDA_ARCHITECTURES "Auto" CACHE STRING "\"Auto\" detects local machine GPU compute arch at runtime, \"Common\" and \"All\" cover common and entire subsets of architectures, \"Names\" is a list of architectures to enable by name, \"Numbers\" is a list of compute capabilities (version number) to enable")
-  set_property(CACHE CUDA_ARCHITECTURES PROPERTY STRINGS "Auto" "Common" "All" "Kepler Maxwell Kepler+Tegra Maxwell+Tegra Pascal" "3.0 7.5")
-  enable_language(CUDA)
-  if(CMAKE_CUDA_COMPILER_VERSION VERSION_LESS "9.0")
-    message(STATUS "Unsupported CUDA version, please upgrade to CUDA 9+. Disabling CUDA support")
-    set(ENABLE_CUDA "FALSE" CACHE BOOL "Enable CUDA support" FORCE)
-  else()
-    find_package(CUDA REQUIRED)
-    cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_ARCHITECTURES})
-    message(STATUS "Building with CUDA flags: " "${CUDA_ARCH_FLAGS}")
-    if (NOT "arch=compute_70,code=sm_70" IN_LIST CUDA_ARCH_FLAGS AND NOT "arch=compute_72,code=sm_72" IN_LIST CUDA_ARCH_FLAGS AND NOT "arch=compute_75,code=sm_75" IN_LIST CUDA_ARCH_FLAGS)
-      set(ENABLE_CUDNN_HALF "FALSE" CACHE BOOL "Enable CUDNN Half precision" FORCE)
-      message(STATUS "Your setup does not supports half precision (it requires CC >= 7.0)")
-    else()
-      message(STATUS "Your setup supports half precision (it requires CC >= 7.0)")
-    endif()
-  endif()
-else()
+if(${CMAKE_VERSION} VERSION_LESS "3.9.0")
+  message(WARNING "To build with CUDA support you need CMake 3.9.0+")
   set(ENABLE_CUDA "FALSE" CACHE BOOL "Enable CUDA support" FORCE)
+else()
+  include(CheckLanguage)
+  check_language(CUDA)
+  if(CMAKE_CUDA_COMPILER AND ENABLE_CUDA)
+    set(CUDA_ARCHITECTURES "Auto" CACHE STRING "\"Auto\" detects local machine GPU compute arch at runtime, \"Common\" and \"All\" cover common and entire subsets of architectures, \"Names\" is a list of architectures to enable by name, \"Numbers\" is a list of compute capabilities (version number) to enable")
+    set_property(CACHE CUDA_ARCHITECTURES PROPERTY STRINGS "Auto" "Common" "All" "Kepler Maxwell Kepler+Tegra Maxwell+Tegra Pascal" "3.0 7.5")
+    enable_language(CUDA)
+    find_package(CUDA REQUIRED)
+    if(CUDA_VERSION VERSION_LESS "9.0")
+      message(STATUS "Unsupported CUDA version, please upgrade to CUDA 9+. Disabling CUDA support")
+      set(ENABLE_CUDA "FALSE" CACHE BOOL "Enable CUDA support" FORCE)
+    else()
+      cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_ARCHITECTURES})
+      message(STATUS "Building with CUDA flags: " "${CUDA_ARCH_FLAGS}")
+      if (NOT "arch=compute_70,code=sm_70" IN_LIST CUDA_ARCH_FLAGS AND NOT "arch=compute_72,code=sm_72" IN_LIST CUDA_ARCH_FLAGS AND NOT "arch=compute_75,code=sm_75" IN_LIST CUDA_ARCH_FLAGS)
+        set(ENABLE_CUDNN_HALF "FALSE" CACHE BOOL "Enable CUDNN Half precision" FORCE)
+        message(STATUS "Your setup does not supports half precision (it requires CC >= 7.0)")
+      endif()
+    endif()
+  else()
+    set(ENABLE_CUDA "FALSE" CACHE BOOL "Enable CUDA support" FORCE)
+  endif()
 endif()
 
 if (WIN32 AND ENABLE_CUDA AND CMAKE_MAKE_PROGRAM MATCHES "ninja")
@@ -100,6 +93,7 @@ if(MSVC)
   find_package(PThreads_windows REQUIRED)
 endif()
 if(ENABLE_OPENCV)
+
   find_package(OpenCV)
   if(OpenCV_FOUND)
     if(SELECT_OPENCV_MODULES)
@@ -134,10 +128,10 @@ if(ENABLE_OPENCV)
   endif()
 endif()
 find_package(Stb REQUIRED)
-find_package(OpenMP)
-
-if(APPLE AND NOT OPENMP_FOUND)
-  message(STATUS "  ->  To enable OpenMP on macOS, please install libomp from Homebrew")
+if(${CMAKE_VERSION} VERSION_LESS "3.11.0")
+  message(WARNING "To build with OpenMP support you need CMake 3.11.0+")
+else()
+  find_package(OpenMP)
 endif()
 
 set(ADDITIONAL_CXX_FLAGS "-Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -Wno-deprecated-declarations -Wno-write-strings")
@@ -256,7 +250,7 @@ list(APPEND headers
   ${CMAKE_CURRENT_LIST_DIR}/include/darknet.h
 )
 #remove windows only files
-if(NOT MSVC)
+if(NOT WIN32)
   list(REMOVE_ITEM headers
     ${CMAKE_CURRENT_LIST_DIR}/src/gettimeofday.h
     ${CMAKE_CURRENT_LIST_DIR}/src/getopt.h
@@ -276,7 +270,7 @@ list(REMOVE_ITEM sources
   ${CMAKE_CURRENT_LIST_DIR}/src/darknet.c
 )
 #remove windows only files
-if(NOT MSVC)
+if(NOT WIN32)
   list(REMOVE_ITEM sources
     ${CMAKE_CURRENT_LIST_DIR}/src/gettimeofday.c
     ${CMAKE_CURRENT_LIST_DIR}/src/getopt.c
@@ -318,6 +312,26 @@ if(BUILD_AS_CPP)
   set_target_properties(darknet PROPERTIES LINKER_LANGUAGE CXX)
 endif()
 
+add_executable(classifier ${CMAKE_CURRENT_LIST_DIR}/extra/classifier.cpp)
+
+#if(OpenCV_FOUND)
+add_executable(shadeoftime ${CMAKE_CURRENT_LIST_DIR}/maxsrc/shadeoftime.cpp)
+target_link_libraries(shadeoftime PRIVATE ${OpenCV_LINKED_COMPONENTS})
+target_include_directories(shadeoftime PUBLIC ${OpenCV_INCLUDE_DIRS})
+
+add_executable(readvideo ${CMAKE_CURRENT_LIST_DIR}/maxsrc/readvideo.cpp)
+target_link_libraries(readvideo PRIVATE ${OpenCV_LINKED_COMPONENTS})
+target_include_directories(readvideo PUBLIC ${OpenCV_INCLUDE_DIRS})
+
+
+add_executable(dirscan ${CMAKE_CURRENT_LIST_DIR}/maxsrc/linkscan.cpp)
+#target_link_libraries(dirscan PRIVATE ${OpenCV_LINKED_COMPONENTS})
+#target_include_directories(dirscan PUBLIC ${OpenCV_INCLUDE_DIRS})
+
+
+#endif()
+
+
 target_include_directories(darknet PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src> $<INSTALL_INTERFACE:${DARKNET_INSTALL_INCLUDE_DIR}> $<BUILD_INTERFACE:${Stb_INCLUDE_DIR}>)
 target_include_directories(dark PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src> $<INSTALL_INTERFACE:${DARKNET_INSTALL_INCLUDE_DIR}> $<BUILD_INTERFACE:${Stb_INCLUDE_DIR}>)
 target_include_directories(uselib PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src> $<INSTALL_INTERFACE:${DARKNET_INSTALL_INCLUDE_DIR}> $<BUILD_INTERFACE:${Stb_INCLUDE_DIR}>)
@@ -339,6 +353,7 @@ if(CUDNN_FOUND)
     target_compile_definitions(darknet PRIVATE -DCUDNN_HALF)
     target_compile_definitions(dark PUBLIC -DCUDNN_HALF)
   endif()
+  target_link_libraries(classifier PRIVATE CuDNN::CuDNN)
 endif()
 
 if(OpenCV_FOUND)
@@ -360,23 +375,19 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCC)
   target_link_libraries(darknet PRIVATE m)
   target_link_libraries(dark PUBLIC m)
+  target_link_libraries(classifier PRIVATE m)
 endif()
 
 if(MSVC)
   target_link_libraries(darknet PRIVATE PThreads_windows::PThreads_windows)
-  target_link_libraries(darknet PRIVATE wsock32)
+  target_link_libraries(darknet PRIVATE wsock32 ws2_32)
   target_link_libraries(dark PUBLIC PThreads_windows::PThreads_windows)
-  target_link_libraries(dark PUBLIC wsock32)
+  target_link_libraries(dark PUBLIC wsock32 ws2_32)
   target_link_libraries(uselib PRIVATE PThreads_windows::PThreads_windows)
   target_compile_definitions(darknet PRIVATE -D_CRT_RAND_S -DNOMINMAX -D_USE_MATH_DEFINES)
   target_compile_definitions(dark PRIVATE -D_CRT_RAND_S -DNOMINMAX -D_USE_MATH_DEFINES)
   target_compile_definitions(dark PUBLIC -D_CRT_SECURE_NO_WARNINGS)
   target_compile_definitions(uselib PRIVATE -D_CRT_RAND_S -DNOMINMAX -D_USE_MATH_DEFINES)
-endif()
-
-if(MSVC OR MINGW)
-  target_link_libraries(darknet PRIVATE ws2_32)
-  target_link_libraries(dark PUBLIC ws2_32)
 endif()
 
 target_link_libraries(darknet PRIVATE Threads::Threads)
@@ -408,6 +419,7 @@ if(USE_INTEGRATED_LIBS)
 endif()
 
 target_link_libraries(uselib PRIVATE dark)
+target_link_libraries(classifier PRIVATE dark)
 if(OpenCV_FOUND AND OpenCV_VERSION VERSION_GREATER "3.0" AND BUILD_USELIB_TRACK)
   target_link_libraries(uselib_track PRIVATE dark)
   target_compile_definitions(uselib_track PRIVATE TRACK_OPTFLOW=1)
