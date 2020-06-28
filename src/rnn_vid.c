@@ -88,7 +88,7 @@ void train_vid_rnn(char *cfgfile, char *weightfile)
     list *plist = get_paths(train_videos);
     int N = plist->size;
     char **paths = (char **)list_to_array(plist);
-    clock_t time;
+    time_t timenow;
     int steps = net.time_steps;
     int batch = net.batch / net.time_steps;
 
@@ -97,7 +97,7 @@ void train_vid_rnn(char *cfgfile, char *weightfile)
 
     while(get_current_batch(net) < net.max_batches){
         i += 1;
-        time=clock();
+        time(&timenow);
         float_pair p = get_rnn_vid_data(extractor, paths, N, batch, steps);
 
         float loss = train_network_datum(net, p.x, p.y) / (net.batch);
@@ -107,7 +107,7 @@ void train_vid_rnn(char *cfgfile, char *weightfile)
         if (avg_loss < 0) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
 
-        fprintf(stderr, "%d: %f, %f avg, %f rate, %lf seconds\n", i, loss, avg_loss, get_current_rate(net), sec(clock()-time));
+        fprintf(stderr, "%d: %f, %f avg, %f rate, %lf seconds\n", i, loss, avg_loss, get_current_rate(net), difftime(time(NULL), timenow));
         if(i%100==0){
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights", backup_directory, base, i);

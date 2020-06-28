@@ -797,20 +797,6 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
         }
 
         if (!state.net.adversarial && !l.train_only_bn) {
-
-            float *old_input = state.input;
-            if (l.reverse) {
-                if (*state.net.max_output16_size < l.inputs) {
-                    *state.net.max_output16_size = l.inputs;
-                    if (*state.net.output16_gpu) cuda_free(*state.net.output16_gpu);
-                    assert(*state.net.max_output16_size > 0);
-                    *state.net.output16_gpu = cuda_make_array(NULL, l.inputs);
-                }
-                mult_inverse_array_gpu(state.input, *state.net.output16_gpu, l.inputs, l.reverse);
-                state.input = *state.net.output16_gpu;
-            }
-
-
             // calculate conv weight updates
             // if used: beta=1 then loss decreases faster
             CHECK_CUDNN(cudnnConvolutionBackwardFilter(cudnn_handle(),
@@ -826,26 +812,10 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
                 &one,
                 l.dweightDesc,
                 l.weight_updates_gpu));
-
-            state.input = old_input;
         }
-
 
         if (state.delta) {
             if (l.binary || l.xnor) swap_binary(&l);
-
-            float *old_weights = l.weights_gpu;
-            if (l.reverse) {
-                if (*state.net.max_output16_size < l.nweights) {
-                    *state.net.max_output16_size = l.nweights;
-                    if (*state.net.output16_gpu) cuda_free(*state.net.output16_gpu);
-                    assert(*state.net.max_output16_size > 0);
-                    *state.net.output16_gpu = cuda_make_array(NULL, l.nweights);
-                }
-                mult_inverse_array_gpu(l.weights_gpu, *state.net.output16_gpu, l.nweights, l.reverse);
-                l.weights_gpu = *state.net.output16_gpu;
-            }
-
             // http://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html#cudnnConvolutionBackwardData
             // calculate delta for the next layer
             CHECK_CUDNN(cudnnConvolutionBackwardData(cudnn_handle(),
@@ -861,8 +831,6 @@ void backward_convolutional_layer_gpu(convolutional_layer l, network_state state
                 &one,
                 l.dsrcTensorDesc,
                 state.delta));
-
-            l.weights_gpu = old_weights;
 
             if (l.binary || l.xnor) swap_binary(&l);
             if (l.xnor) gradient_array_ongpu(original_input, l.batch*l.c*l.h*l.w, HARDTAN, state.delta);
@@ -1279,14 +1247,6 @@ void update_convolutional_layer_gpu(layer l, int batch, float learning_rate_init
 
     reset_nan_and_inf(l.weight_updates_gpu, l.nweights);
     fix_nan_and_inf(l.weights_gpu, l.nweights);
-
-    // Gradient Centralization
-    if (l.grad_centr && l.batch_normalize) {
-        // weights[filters][channels][height][width]
-        // for(filters) w[f] = w[f] - mean(w[c][h][w])
-        gradient_centralization_gpu(l.size, l.size, l.c / l.groups, l.n, l.weight_updates_gpu);
-    }
-
 
     if (l.adam) {
         //adam_update_gpu(l.weights_gpu, l.weight_updates_gpu, l.m_gpu, l.v_gpu, a.B1, a.B2, a.eps, decay, learning_rate, l.nweights, batch, a.t);

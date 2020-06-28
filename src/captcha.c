@@ -49,7 +49,7 @@ void train_captcha(char *cfgfile, char *weightfile)
     }
     char **paths = (char **)list_to_array(plist);
     printf("%d\n", plist->size);
-    clock_t time;
+    time_t timenow;
     pthread_t load_thread;
     data train;
     data buffer;
@@ -68,7 +68,7 @@ void train_captcha(char *cfgfile, char *weightfile)
     load_thread = load_data_in_thread(args);
     while(1){
         ++i;
-        time=clock();
+        time(&timenow);
         pthread_join(load_thread, 0);
         train = buffer;
         fix_data_captcha(train, solved);
@@ -80,12 +80,12 @@ void train_captcha(char *cfgfile, char *weightfile)
          */
 
         load_thread = load_data_in_thread(args);
-        printf("Loaded: %lf seconds\n", sec(clock()-time));
-        time=clock();
+        printf("Loaded: %lf seconds\n", difftime(time(NULL), timenow));
+        time(&timenow);
         float loss = train_network(net, train);
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
-        printf("%d: %f, %f avg, %lf seconds, %ld images\n", i, loss, avg_loss, sec(clock()-time), *net.seen);
+        printf("%d: %f, %f avg, %lf seconds, %ld images\n", i, loss, avg_loss, difftime(time(NULL), timenow), *net.seen);
         free_data(train);
         if(i%100==0){
             char buff[256];
@@ -122,7 +122,7 @@ void test_captcha(char *cfgfile, char *weightfile, char *filename)
         float *X = im.data;
         float *predictions = network_predict(net, X);
         top_predictions(net, 26, indexes);
-        //printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        //printf("%s: Predicted in %f seconds.\n", input, difftime(time(NULL), timenow));
         for(i = 0; i < 26; ++i){
             int index = indexes[i];
             if(i != 0) printf(", ");
@@ -155,7 +155,7 @@ void valid_captcha(char *cfgfile, char *weightfile, char *filename)
         image im = load_image_color(paths[i], net.w, net.h);
         float *X = im.data;
         float *predictions = network_predict(net, X);
-        //printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        //printf("%s: Predicted in %f seconds.\n", input, difftime(time(NULL), timenow));
         int truth = -1;
         for(j = 0; j < 13; ++j){
             if (strstr(paths[i], labels[j])) truth = j;
@@ -193,20 +193,20 @@ void valid_captcha(char *cfgfile, char *weightfile, char *filename)
    list *plist = get_paths("/data/captcha/train.auto5");
    char **paths = (char **)list_to_array(plist);
    printf("%d\n", plist->size);
-   clock_t time;
+   time_t timenow;
    while(1){
    ++i;
-   time=clock();
+   time(&timenow);
    data train = load_data_captcha(paths, imgs, plist->size, 10, 200, 60);
    translate_data_rows(train, -128);
    scale_data_rows(train, 1./128);
-   printf("Loaded: %lf seconds\n", sec(clock()-time));
-   time=clock();
+   printf("Loaded: %lf seconds\n", difftime(time(NULL), timenow));
+   time(&timenow);
    float loss = train_network(net, train);
    net.seen += imgs;
    if(avg_loss == -1) avg_loss = loss;
    avg_loss = avg_loss*.9 + loss*.1;
-   printf("%d: %f, %f avg, %lf seconds, %d images\n", i, loss, avg_loss, sec(clock()-time), net.seen);
+   printf("%d: %f, %f avg, %lf seconds, %d images\n", i, loss, avg_loss, difftime(time(NULL), timenow), net.seen);
    free_data(train);
    if(i%10==0){
    char buff[256];
@@ -259,19 +259,19 @@ int i = net.seen/imgs;
 list *plist = get_paths("/data/captcha/encode.list");
 char **paths = (char **)list_to_array(plist);
 printf("%d\n", plist->size);
-clock_t time;
+time_t timenow;
 while(1){
     ++i;
-    time=clock();
+    time(&timenow);
     data train = load_data_captcha_encode(paths, imgs, plist->size, 300, 57);
     scale_data_rows(train, 1./255);
-    printf("Loaded: %lf seconds\n", sec(clock()-time));
-    time=clock();
+    printf("Loaded: %lf seconds\n", difftime(time(NULL), timenow));
+    time(&timenow);
     float loss = train_network(net, train);
     net.seen += imgs;
     if(avg_loss == -1) avg_loss = loss;
     avg_loss = avg_loss*.9 + loss*.1;
-    printf("%d: %f, %f avg, %lf seconds, %d images\n", i, loss, avg_loss, sec(clock()-time), net.seen);
+    printf("%d: %f, %f avg, %lf seconds, %d images\n", i, loss, avg_loss, difftime(time(NULL), timenow), net.seen);
     free_matrix(train.X);
     if(i%100==0){
         char buff[256];

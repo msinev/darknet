@@ -172,10 +172,10 @@ void train_char_rnn(char *cfgfile, char *weightfile, char *filename, int clear, 
     }
     //printf("\n");
 
-    clock_t time;
+    time_t timenow;
     while(get_current_batch(net) < net.max_batches){
         i += 1;
-        time=clock();
+        time(&timenow);
         float_pair p;
         if(tokenized){
             p = get_rnn_token_data(tokens, offsets, inputs, size, streams, steps);
@@ -190,7 +190,7 @@ void train_char_rnn(char *cfgfile, char *weightfile, char *filename, int clear, 
         avg_loss = avg_loss*.9 + loss*.1;
 
         int chars = get_current_batch(net)*batch;
-        fprintf(stderr, "%d: %f, %f avg, %f rate, %lf seconds, %f epochs\n", i, loss, avg_loss, get_current_rate(net), sec(clock()-time), (float) chars/size);
+        fprintf(stderr, "%d: %f, %f avg, %f rate, %lf seconds, %f epochs\n", i, loss, avg_loss, get_current_rate(net), difftime(time(NULL), timenow), (float) chars/size);
 
         for(j = 0; j < streams; ++j){
             //printf("%d\n", j);

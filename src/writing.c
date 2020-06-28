@@ -17,7 +17,7 @@ void train_writing(char *cfgfile, char *weightfile)
     int imgs = net.batch*net.subdivisions;
     list *plist = get_paths("figures.list");
     char **paths = (char **)list_to_array(plist);
-    clock_t time;
+    time_t timenow;
     int N = plist->size;
     printf("N: %d\n", N);
     image out = get_network_image(net);
@@ -38,13 +38,13 @@ void train_writing(char *cfgfile, char *weightfile)
     pthread_t load_thread = load_data_in_thread(args);
     int epoch = (*net.seen)/N;
     while(get_current_batch(net) < net.max_batches || net.max_batches == 0){
-        time=clock();
+        time(&timenow);
         pthread_join(load_thread, 0);
         train = buffer;
         load_thread = load_data_in_thread(args);
-        printf("Loaded %lf seconds\n",sec(clock()-time));
+        printf("Loaded %lf seconds\n",difftime(time(NULL), timenow));
 
-        time=clock();
+        time(&timenow);
         float loss = train_network(net, train);
 
         /*
@@ -65,7 +65,7 @@ void train_writing(char *cfgfile, char *weightfile)
 
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
-        printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
+        printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), difftime(time(NULL), timenow), *net.seen);
         free_data(train);
         if(get_current_batch(net)%100 == 0){
             char buff[256];
@@ -89,7 +89,7 @@ void test_writing(char *cfgfile, char *weightfile, char *filename)
     }
     set_batch_network(&net, 1);
     srand(2222222);
-    clock_t time;
+    time_t timenow;
     char buff[256];
     char *input = buff;
     while(1){
@@ -107,9 +107,9 @@ void test_writing(char *cfgfile, char *weightfile, char *filename)
         resize_network(&net, im.w, im.h);
         printf("%d %d %d\n", im.h, im.w, im.c);
         float *X = im.data;
-        time=clock();
+        time(&timenow);
         network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        printf("%s: Predicted in %f seconds.\n", input, difftime(time(NULL), timenow));
         image pred = get_network_image(net);
 
         image upsampled = resize_image(pred, im.w, im.h);

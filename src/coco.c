@@ -61,16 +61,16 @@ void train_coco(char *cfgfile, char *weightfile)
     args.hue = net.hue;
 
     pthread_t load_thread = load_data_in_thread(args);
-    clock_t time;
+    time_t timenow;
     //while(i*imgs < N*120){
     while(get_current_batch(net) < net.max_batches){
         i += 1;
-        time=clock();
+        time(&timenow);
         pthread_join(load_thread, 0);
         train = buffer;
         load_thread = load_data_in_thread(args);
 
-        printf("Loaded: %lf seconds\n", sec(clock()-time));
+        printf("Loaded: %lf seconds\n", difftime(time(NULL), timenow));
 
         /*
            image im = float_to_image(net.w, net.h, 3, train.X.vals[113]);
@@ -80,12 +80,12 @@ void train_coco(char *cfgfile, char *weightfile)
            free_image(copy);
          */
 
-        time=clock();
+        time(&timenow);
         float loss = train_network(net, train);
         if (avg_loss < 0) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
 
-        printf("%d: %f, %f avg, %f rate, %lf seconds, %d images\n", i, loss, avg_loss, get_current_rate(net), sec(clock()-time), i*imgs);
+        printf("%d: %f, %f avg, %f rate, %lf seconds, %d images\n", i, loss, avg_loss, get_current_rate(net), difftime(time(NULL), timenow), i*imgs);
         if(i%1000==0 || (i < 1000 && i%100 == 0)){
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights", backup_directory, base, i);
@@ -341,7 +341,7 @@ void test_coco(char *cfgfile, char *weightfile, char *filename, float thresh)
     set_batch_network(&net, 1);
     srand(2222222);
     float nms = .4;
-    clock_t time;
+    time_t timenow;
     char buff[256];
     char *input = buff;
     int j;
@@ -363,9 +363,9 @@ void test_coco(char *cfgfile, char *weightfile, char *filename, float thresh)
         image im = load_image_color(input,0,0);
         image sized = resize_image(im, net.w, net.h);
         float *X = sized.data;
-        time=clock();
+        time(&timenow);
         network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        printf("%s: Predicted in %f seconds.\n", input, difftime(time(NULL), timenow));
         get_detection_boxes(l, 1, 1, thresh, probs, boxes, 0);
         if (nms) do_nms_sort_v2(boxes, probs, l.side*l.side*l.n, l.classes, nms);
         draw_detections(im, l.side*l.side*l.n, thresh, boxes, probs, coco_classes, alphabet, 80);
@@ -411,6 +411,6 @@ void run_coco(int argc, char **argv)
     else if(0==strcmp(argv[2], "train")) train_coco(cfg, weights);
     else if(0==strcmp(argv[2], "valid")) validate_coco(cfg, weights);
     else if(0==strcmp(argv[2], "recall")) validate_coco_recall(cfg, weights);
-    else if(0==strcmp(argv[2], "demo")) demo(cfg, weights, thresh, hier_thresh, cam_index, filename, coco_classes, 80, 1, frame_skip,
-		prefix, out_filename, mjpeg_port, 0, json_port, dont_show, ext_output, 0, 0, 0, 0, 0);
+    else if(0==strcmp(argv[2], "demo")) demo(cfg, weights, thresh, hier_thresh, cam_index, filename, coco_classes, 80, frame_skip,
+		prefix, out_filename, mjpeg_port, json_port, dont_show, ext_output, 0, 0, 0, 0, 0);
 }

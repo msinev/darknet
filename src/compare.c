@@ -24,7 +24,7 @@ void train_compare(char *cfgfile, char *weightfile)
     char **paths = (char **)list_to_array(plist);
     int N = plist->size;
     printf("%d\n", N);
-    clock_t time;
+    time_t timenow;
     pthread_t load_thread;
     data train;
     data buffer;
@@ -44,17 +44,17 @@ void train_compare(char *cfgfile, char *weightfile)
     int i = 0;
     while(1){
         ++i;
-        time=clock();
+        time(&timenow);
         pthread_join(load_thread, 0);
         train = buffer;
 
         load_thread = load_data_in_thread(args);
-        printf("Loaded: %lf seconds\n", sec(clock()-time));
-        time=clock();
+        printf("Loaded: %lf seconds\n", difftime(time(NULL), timenow));
+        time(&timenow);
         float loss = train_network(net, train);
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
-        printf("%.3f: %f, %f avg, %lf seconds, %ld images\n", (float)*net.seen/N, loss, avg_loss, sec(clock()-time), *net.seen);
+        printf("%.3f: %f, %f avg, %lf seconds, %ld images\n", (float)*net.seen/N, loss, avg_loss, difftime(time(NULL), timenow), *net.seen);
         free_data(train);
         if(i%100 == 0){
             char buff[256];
@@ -93,7 +93,7 @@ void validate_compare(char *filename, char *weightfile)
     int N = plist->size/2;
     free_list(plist);
 
-    clock_t time;
+    time_t timenow;
     int correct = 0;
     int total = 0;
     int splits = 10;
@@ -113,7 +113,7 @@ void validate_compare(char *filename, char *weightfile)
 
     pthread_t load_thread = load_data_in_thread(args);
     for(i = 1; i <= splits; ++i){
-        time=clock();
+        time(&timenow);
 
         pthread_join(load_thread, 0);
         val = buffer;
@@ -124,9 +124,9 @@ void validate_compare(char *filename, char *weightfile)
             args.paths = part;
             load_thread = load_data_in_thread(args);
         }
-        printf("Loaded: %d images in %lf seconds\n", val.X.rows, sec(clock()-time));
+        printf("Loaded: %d images in %lf seconds\n", val.X.rows, difftime(time(NULL), timenow));
 
-        time=clock();
+        time(&timenow);
         matrix pred = network_predict_data(net, val);
         int j,k;
         for(j = 0; j < val.y.rows; ++j){
@@ -140,7 +140,7 @@ void validate_compare(char *filename, char *weightfile)
             }
         }
         free_matrix(pred);
-        printf("%d: Acc: %f, %lf seconds, %d images\n", i, (float)correct/total, sec(clock()-time), val.X.rows);
+        printf("%d: Acc: %f, %lf seconds, %d images\n", i, (float)correct/total, difftime(time(NULL), timenow), val.X.rows);
         free_data(val);
     }
 }
@@ -247,12 +247,13 @@ void SortMaster3000(char *filename, char *weightfile)
         boxes[i].class_id = 7;
         boxes[i].elo = 1500;
     }
-    clock_t time=clock();
+    time_t timenow;
+    time(&timenow);
     qsort(boxes, N, sizeof(sortable_bbox), bbox_comparator);
     for(i = 0; i < N; ++i){
         printf("%s\n", boxes[i].filename);
     }
-    printf("Sorted in %d compares, %f secs\n", total_compares, sec(clock()-time));
+    printf("Sorted in %d compares, %f secs\n", total_compares, difftime(time(NULL), timenow));
 }
 
 void BattleRoyaleWithCheese(char *filename, char *weightfile)
@@ -286,15 +287,17 @@ void BattleRoyaleWithCheese(char *filename, char *weightfile)
         }
     }
     int round;
-    clock_t time=clock();
+    time_t timenow;
+    time(&timenow);
     for(round = 1; round <= 4; ++round){
-        clock_t round_time=clock();
+        //clock_t round_time=clock();
+        time_t round_time=time(NULL);
         printf("Round: %d\n", round);
         shuffle(boxes, N, sizeof(sortable_bbox));
         for(i = 0; i < N/2; ++i){
             bbox_fight(net, boxes+i*2, boxes+i*2+1, classes, -1);
         }
-        printf("Round: %f secs, %d remaining\n", sec(clock()-round_time), N);
+        printf("Round: %f secs, %d remaining\n", difftime(time(NULL), round_time), N);
     }
 
     int class_id;
@@ -307,7 +310,8 @@ void BattleRoyaleWithCheese(char *filename, char *weightfile)
         N /= 2;
 
         for(round = 1; round <= 100; ++round){
-            clock_t round_time=clock();
+            //clock_t round_time=clock();
+            time_t round_time=time(NULL);
             printf("Round: %d\n", round);
 
             sorta_shuffle(boxes, N, sizeof(sortable_bbox), 10);
@@ -317,7 +321,7 @@ void BattleRoyaleWithCheese(char *filename, char *weightfile)
             qsort(boxes, N, sizeof(sortable_bbox), elo_comparator);
             if(round <= 20) N = (N*9/10)/2*2;
 
-            printf("Round: %f secs, %d remaining\n", sec(clock()-round_time), N);
+            printf("Round: %f secs, %d remaining\n", difftime(time(NULL), round_time), N);
         }
         char buff[256];
         sprintf(buff, "results/battle_%d.log", class_id);
@@ -327,7 +331,7 @@ void BattleRoyaleWithCheese(char *filename, char *weightfile)
         }
         fclose(outfp);
     }
-    printf("Tournament in %d compares, %f secs\n", total_compares, sec(clock()-time));
+    printf("Tournament in %d compares, %f secs\n", total_compares, difftime(time(NULL), timenow));
 }
 
 void run_compare(int argc, char **argv)

@@ -38,7 +38,6 @@ void *xcalloc(size_t nmemb, size_t size) {
     if(!ptr) {
         calloc_error();
     }
-    memset(ptr, 0, nmemb * size);
     return ptr;
 }
 
@@ -298,12 +297,12 @@ void replace_image_to_label(const char* input_path, char* output_path)
         fprintf(stderr, "Label file name is too short: %s \n", output_path);
     }
 }
-
-float sec(clock_t clocks)
+/*
+float sec(time_t clocks)
 {
-    return (float)clocks/CLOCKS_PER_SEC;
+    return difftime(clocks, 0)
 }
-
+*/
 void top_k(float *a, int n, int k, int *index)
 {
     int i,j;
@@ -329,19 +328,19 @@ void error(const char *s)
 
 void malloc_error()
 {
-    fprintf(stderr, "xMalloc error - possibly out of CPU RAM \n");
+    fprintf(stderr, "xMalloc error\n");
     exit(EXIT_FAILURE);
 }
 
 void calloc_error()
 {
-    fprintf(stderr, "Calloc error - possibly out of CPU RAM \n");
+    fprintf(stderr, "Calloc error\n");
     exit(EXIT_FAILURE);
 }
 
 void realloc_error()
 {
-    fprintf(stderr, "Realloc error - possibly out of CPU RAM \n");
+    fprintf(stderr, "Realloc error\n");
     exit(EXIT_FAILURE);
 }
 
@@ -643,8 +642,8 @@ void normalize_array(float *a, int n)
     for(i = 0; i < n; ++i){
         a[i] = (a[i] - mu)/sigma;
     }
-    //mu = mean_array(a,n);
-    //sigma = sqrt(variance_array(a,n));
+    mu = mean_array(a,n);
+    sigma = sqrt(variance_array(a,n));
 }
 
 void translate_array(float *a, int n, float s)

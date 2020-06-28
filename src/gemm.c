@@ -513,9 +513,10 @@ static inline int popcnt_32(uint32_t val32) {
 }
 //----------------------------
 
+
 #if (defined(__AVX__) && defined(__x86_64__)) || (defined(_WIN64) && !defined(__MINGW32__))
 
-#if (defined(_WIN64) && !defined(__MINGW64__))
+#ifdef _WIN64
 #include <intrin.h>
 #include <ammintrin.h>
 #include <immintrin.h>
@@ -2761,15 +2762,15 @@ void time_ongpu(int TA, int TB, int m, int k, int n)
     float *c_cl = cuda_make_array(c, m*n);
 
     int i;
-    clock_t start = clock(), end;
+    time_t start = time(NULL), end;
     for(i = 0; i<iter; ++i){
         gemm_ongpu(TA,TB,m,n,k,1,a_cl,lda,b_cl,ldb,1,c_cl,n);
         cudaDeviceSynchronize();
     }
     double flop = ((double)m)*n*(2.*k + 2.)*iter;
     double gflop = flop/pow(10., 9);
-    end = clock();
-    double seconds = sec(end-start);
+    end = time(NULL);
+    double seconds = difftime(end,start);
     printf("Matrix Multiplication %dx%d * %dx%d, TA=%d, TB=%d: %lf s, %lf GFLOPS\n",m,k,k,n, TA, TB, seconds, gflop/seconds);
     cuda_free(a_cl);
     cuda_free(b_cl);

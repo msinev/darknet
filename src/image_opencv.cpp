@@ -923,8 +923,9 @@ extern "C" void draw_detections_cv_v3(mat_cv* mat, detection *dets, int num, flo
                 b.h = (b.h < 1) ? b.h : 1;
                 b.x = (b.x < 1) ? b.x : 1;
                 b.y = (b.y < 1) ? b.y : 1;
-                //printf("%f %f %f %f\n", b.x, b.y, b.w, b.h);
-
+#ifdef MDEBUG
+                printf("\nMDEBUG Draw box x %f y %f w %f h %f\n", b.x, b.y, b.w, b.h);
+#endif
                 int left = (b.x - b.w / 2.)*show_img->cols;
                 int right = (b.x + b.w / 2.)*show_img->cols;
                 int top = (b.y - b.h / 2.)*show_img->rows;
@@ -934,7 +935,9 @@ extern "C" void draw_detections_cv_v3(mat_cv* mat, detection *dets, int num, flo
                 if (right > show_img->cols - 1) right = show_img->cols - 1;
                 if (top < 0) top = 0;
                 if (bot > show_img->rows - 1) bot = show_img->rows - 1;
-
+#ifdef MDEBUG
+                printf("MDEBUG Draw abs left %d top %d right %d bottom %d\n", left, top, right, bot);
+#endif
                 //int b_x_center = (left + right) / 2;
                 //int b_y_center = (top + bot) / 2;
                 //int b_width = right - left;

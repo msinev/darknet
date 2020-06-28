@@ -246,9 +246,6 @@ network make_network(int n)
     net.layers = (layer*)xcalloc(net.n, sizeof(layer));
     net.seen = (uint64_t*)xcalloc(1, sizeof(uint64_t));
     net.cur_iteration = (int*)xcalloc(1, sizeof(int));
-    net.total_bbox = (int*)xcalloc(1, sizeof(int));
-    net.rewritten_bbox = (int*)xcalloc(1, sizeof(int));
-    *net.rewritten_bbox = *net.total_bbox = 0;
 #ifdef GPU
     net.input_gpu = (float**)xcalloc(1, sizeof(float*));
     net.truth_gpu = (float**)xcalloc(1, sizeof(float*));
@@ -369,8 +366,6 @@ float train_network_datum(network net, float *x, float *y)
     backward_network(net, state);
     float error = get_network_cost(net);
     //if(((*net.seen)/net.batch)%net.subdivisions == 0) update_network(net);
-    if(*(state.net.total_bbox) > 0)
-        fprintf(stderr, " total_bbox = %d, rewritten_bbox = %f %% \n", *(state.net.total_bbox), 100 * (float)*(state.net.rewritten_bbox) / *(state.net.total_bbox));
     return error;
 }
 
@@ -735,18 +730,34 @@ int num_detections(network *net, float thresh)
 {
     int i;
     int s = 0;
+#ifdef MDEBUG
+    printf("MDEBUG: counting detections treshold %f\n", thresh);
+#endif
     for (i = 0; i < net->n; ++i) {
         layer l = net->layers[i];
         if (l.type == YOLO) {
             s += yolo_num_detections(l, thresh);
+
+#ifdef MDEBUG
+            printf("MDEBUG: Add YOLO number of detections %d\n", s);
+#endif
         }
         if (l.type == GAUSSIAN_YOLO) {
             s += gaussian_yolo_num_detections(l, thresh);
+#ifdef MDEBUG
+            printf("MDEBUG: Add Number gaussean detections %d\n", s);
+#endif
         }
         if (l.type == DETECTION || l.type == REGION) {
             s += l.w*l.h*l.n;
+#ifdef MDEBUG
+            printf("MDEBUG: Add Number of detections %d\n", s);
+#endif
         }
     }
+#ifdef MDEBUG
+    printf("MDEBUG: Number of detections %d\n", s);
+#endif
     return s;
 }
 
@@ -776,11 +787,10 @@ detection *make_network_boxes(network *net, float thresh, int *num)
     for (i = 0; i < nboxes; ++i) {
         dets[i].prob = (float*)xcalloc(l.classes, sizeof(float));
         // tx,ty,tw,th uncertainty
-        if(l.type == GAUSSIAN_YOLO) dets[i].uc = (float*)xcalloc(4, sizeof(float)); // Gaussian_YOLOv3
-        else dets[i].uc = NULL;
-
-        if (l.coords > 4) dets[i].mask = (float*)xcalloc(l.coords - 4, sizeof(float));
-        else dets[i].mask = NULL;
+        dets[i].uc = (float*)xcalloc(4, sizeof(float)); // Gaussian_YOLOv3
+        if (l.coords > 4) {
+            dets[i].mask = (float*)xcalloc(l.coords - 4, sizeof(float));
+        }
     }
     return dets;
 }
@@ -795,12 +805,9 @@ detection *make_network_boxes_batch(network *net, float thresh, int *num, int ba
     detection* dets = (detection*)calloc(nboxes, sizeof(detection));
     for (i = 0; i < nboxes; ++i) {
         dets[i].prob = (float*)calloc(l.classes, sizeof(float));
-        // tx,ty,tw,th uncertainty
-        if (l.type == GAUSSIAN_YOLO) dets[i].uc = (float*)xcalloc(4, sizeof(float)); // Gaussian_YOLOv3
-        else dets[i].uc = NULL;
-
-        if (l.coords > 4) dets[i].mask = (float*)xcalloc(l.coords - 4, sizeof(float));
-        else dets[i].mask = NULL;
+        if (l.coords > 4) {
+            dets[i].mask = (float*)calloc(l.coords - 4, sizeof(float));
+        }
     }
     return dets;
 }
@@ -1152,8 +1159,6 @@ void free_network(network net)
     free(net.steps);
     free(net.seen);
     free(net.cur_iteration);
-    free(net.total_bbox);
-    free(net.rewritten_bbox);
 
 #ifdef GPU
     if (gpu_index >= 0) cuda_free(net.workspace);
@@ -1228,7 +1233,7 @@ void fuse_conv_batchnorm(network net)
 #endif
             }
         }
-        else  if (l->type == SHORTCUT && l->weights && l->weights_normalization)
+        else  if (l->type == SHORTCUT && l->weights && l->weights_normalizion)
         {
             if (l->nweights > 0) {
                 //cuda_pull_array(l.weights_gpu, l.weights, l.nweights);
@@ -1245,7 +1250,7 @@ void fuse_conv_batchnorm(network net)
             {
                 float sum = 1, max_val = -FLT_MAX;
 
-                if (l->weights_normalization == SOFTMAX_NORMALIZATION) {
+                if (l->weights_normalizion == SOFTMAX_NORMALIZATION) {
                     for (i = 0; i < (l->n + 1); ++i) {
                         int w_index = chan + i * layer_step;
                         float w = l->weights[w_index];
@@ -1259,20 +1264,20 @@ void fuse_conv_batchnorm(network net)
                 for (i = 0; i < (l->n + 1); ++i) {
                     int w_index = chan + i * layer_step;
                     float w = l->weights[w_index];
-                    if (l->weights_normalization == RELU_NORMALIZATION) sum += lrelu(w);
-                    else if (l->weights_normalization == SOFTMAX_NORMALIZATION) sum += expf(w - max_val);
+                    if (l->weights_normalizion == RELU_NORMALIZATION) sum += lrelu(w);
+                    else if (l->weights_normalizion == SOFTMAX_NORMALIZATION) sum += expf(w - max_val);
                 }
 
                 for (i = 0; i < (l->n + 1); ++i) {
                     int w_index = chan + i * layer_step;
                     float w = l->weights[w_index];
-                    if (l->weights_normalization == RELU_NORMALIZATION) w = lrelu(w) / sum;
-                    else if (l->weights_normalization == SOFTMAX_NORMALIZATION) w = expf(w - max_val) / sum;
+                    if (l->weights_normalizion == RELU_NORMALIZATION) w = lrelu(w) / sum;
+                    else if (l->weights_normalizion == SOFTMAX_NORMALIZATION) w = expf(w - max_val) / sum;
                     l->weights[w_index] = w;
                 }
             }
 
-            l->weights_normalization = NO_NORMALIZATION;
+            l->weights_normalizion = NO_NORMALIZATION;
 
 #ifdef GPU
             if (gpu_index >= 0) {

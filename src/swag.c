@@ -45,23 +45,23 @@ void train_swag(char *cfgfile, char *weightfile)
     args.type = REGION_DATA;
 
     pthread_t load_thread = load_data_in_thread(args);
-    clock_t time;
+    time_t timenow;
     //while(i*imgs < N*120){
     while(get_current_batch(net) < net.max_batches){
         i += 1;
-        time=clock();
+        time(&timenow);
         pthread_join(load_thread, 0);
         train = buffer;
         load_thread = load_data_in_thread(args);
 
-        printf("Loaded: %lf seconds\n", sec(clock()-time));
+        printf("Loaded: %lf seconds\n", difftime(time(NULL), timenow));
 
-        time=clock();
+        time(&timenow);
         float loss = train_network(net, train);
         if (avg_loss < 0) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
 
-        printf("%d: %f, %f avg, %f rate, %lf seconds, %d images\n", i, loss, avg_loss, get_current_rate(net), sec(clock()-time), i*imgs);
+        printf("%d: %f, %f avg, %f rate, %lf seconds, %d images\n", i, loss, avg_loss, get_current_rate(net), difftime(time(NULL), timenow), i*imgs);
         if(i%1000==0 || i == 600){
             char buff[256];
             sprintf(buff, "%s/%s_%d.weights", backup_directory, base, i);

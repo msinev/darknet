@@ -23,7 +23,7 @@ void train_tag(char *cfgfile, char *weightfile, int clear)
     char **paths = (char **)list_to_array(plist);
     printf("%d\n", plist->size);
     int N = plist->size;
-    clock_t time;
+    time_t timenow;
     pthread_t load_thread;
     data train;
     data buffer;
@@ -53,17 +53,17 @@ void train_tag(char *cfgfile, char *weightfile, int clear)
     load_thread = load_data_in_thread(args);
     int epoch = (*net.seen)/N;
     while(get_current_batch(net) < net.max_batches || net.max_batches == 0){
-        time=clock();
+        time(&timenow);
         pthread_join(load_thread, 0);
         train = buffer;
 
         load_thread = load_data_in_thread(args);
-        printf("Loaded: %lf seconds\n", sec(clock()-time));
-        time=clock();
+        printf("Loaded: %lf seconds\n", difftime(time(NULL), timenow));
+        time(&timenow);
         float loss = train_network(net, train);
         if(avg_loss == -1) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
-        printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), sec(clock()-time), *net.seen);
+        printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(net), (float)(*net.seen)/N, loss, avg_loss, get_current_rate(net), difftime(time(NULL), timenow), *net.seen);
         free_data(train);
         if(*net.seen/N > epoch){
             epoch = *net.seen/N;
@@ -99,7 +99,7 @@ void test_tag(char *cfgfile, char *weightfile, char *filename)
     srand(2222222);
     int i = 0;
     char **names = get_labels("data/tags.txt");
-    clock_t time;
+    time_t timenow;
     int indexes[10];
     char buff[256];
     char *input = buff;
@@ -120,10 +120,10 @@ void test_tag(char *cfgfile, char *weightfile, char *filename)
         printf("%d %d\n", r.w, r.h);
 
         float *X = r.data;
-        time=clock();
+        time(&timenow);
         float *predictions = network_predict(net, X);
         top_predictions(net, 10, indexes);
-        printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        printf("%s: Predicted in %f seconds.\n", input, difftime(time(NULL), timenow));
         for(i = 0; i < 10; ++i){
             int index = indexes[i];
             printf("%.1f%%: %s\n", predictions[index]*100, names[index]);
