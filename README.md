@@ -1,8 +1,10 @@
-#This is NOT original darknet repo. Just for my experiments 
+# This is NOT original darknet repo. Just for my experiments 
 
 Main purpose of this repo are experiments on video applications of yolo (etc) networks.
 
 ### 1 Shade of time is a test of simple idea that makes consecutive gray images into RGB to give sense of time into data. 
+
+
   
 
 
