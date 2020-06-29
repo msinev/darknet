@@ -1,7 +1,15 @@
+#This is NOT original darknet repo. Just for my experiments 
+
+Main purpose of this repo are experiments on video applications of yolo (etc) networks.
+
+### 1 Shade of time is a test of simple idea that makes consecutive gray images into RGB to give sense of time into data. 
+  
+
+
 # Yolo-v4 and Yolo-v3/v2 for Windows and Linux
 ### (neural network for object detection) - Tensor Cores can be used on [Linux](https://github.com/AlexeyAB/darknet#how-to-compile-on-linux) and [Windows](https://github.com/AlexeyAB/darknet#how-to-compile-on-windows-using-cmake-gui)
 
-This is NOT original darknet repo. Just for my experiments 
+
 
 
 Paper Yolo v4: https://arxiv.org/abs/2004.10934
