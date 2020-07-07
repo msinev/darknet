@@ -1,7 +1,10 @@
 //
 // Created by max on 07.07.2020.
+// multiple consumers are ok
+// multiple producers should work as well but close operation is tricky
+// my comp benchmarks: 1-10M tps depending on number of consumers (multiple is a bit slower due to sync)
+// and size of data
 //
-
 #ifndef WRITELEVEL_CHANNELS_H
 #define WRITELEVEL_CHANNELS_H
 #include <condition_variable>
