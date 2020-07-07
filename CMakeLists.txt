@@ -163,6 +163,8 @@ if(CMAKE_COMPILER_IS_GNUCC OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -ffp-contract=fast -mavx -mavx2 -msse3 -msse4.1 -msse4.2 -msse4a")
 endif()
 
+find_package(Boost REQUIRED COMPONENTS program_options)
+
 if(OpenCV_FOUND)
   if(ENABLE_CUDA AND NOT OpenCV_CUDA_VERSION)
     set(BUILD_USELIB_TRACK "FALSE" CACHE BOOL "Build uselib_track" FORCE)
@@ -313,9 +315,11 @@ if(BUILD_AS_CPP)
 endif()
 
 add_executable(classifier ${CMAKE_CURRENT_LIST_DIR}/extra/classifier.cpp)
+target_include_directories(classifier PUBLIC Boost_INCLUDE_DIR)
+target_link_libraries(classifier PRIVATE ${Boost_LIBRARIES})
 
 #if(OpenCV_FOUND)
-add_executable(todata ${CMAKE_CURRENT_LIST_DIR}/maxsrc/scantodata.cpp)
+add_executable(todata ${CMAKE_CURRENT_LIST_DIR}/maxsrc/scantodata.cpp ${CMAKE_CURRENT_LIST_DIR}/maxsrc/tchannel.hpp)
 target_link_libraries(todata PRIVATE ${OpenCV_LINKED_COMPONENTS})
 target_include_directories(todata PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_include_directories(todata PUBLIC ${CMAKE_CURRENT_LIST_DIR}/src)
@@ -341,6 +345,7 @@ add_executable(dirscan ${CMAKE_CURRENT_LIST_DIR}/maxsrc/linkscan.cpp)
 target_include_directories(darknet PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src> $<INSTALL_INTERFACE:${DARKNET_INSTALL_INCLUDE_DIR}> $<BUILD_INTERFACE:${Stb_INCLUDE_DIR}>)
 target_include_directories(dark PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src> $<INSTALL_INTERFACE:${DARKNET_INSTALL_INCLUDE_DIR}> $<BUILD_INTERFACE:${Stb_INCLUDE_DIR}>)
 target_include_directories(uselib PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include> $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src> $<INSTALL_INTERFACE:${DARKNET_INSTALL_INCLUDE_DIR}> $<BUILD_INTERFACE:${Stb_INCLUDE_DIR}>)
+
 
 target_compile_definitions(darknet PRIVATE -DUSE_CMAKE_LIBS)
 target_compile_definitions(dark PRIVATE -DUSE_CMAKE_LIBS)
