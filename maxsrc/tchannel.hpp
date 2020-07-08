@@ -15,7 +15,7 @@ template<class T> class channel_unlimited {
     std::queue<T>           inp;
     std::mutex              m;
     std::condition_variable cv;
-    bool                    closed=false;
+    volatile bool  closed=false;
 public:
     bool read(T &data) {
         std::unique_lock<std::mutex> lk(m);
@@ -49,13 +49,35 @@ public:
     }
 
 };
+/*
+template<class T, int limit> class circular {
+   T buf[limit];
+   n=0; i=0;
+   T&& get() {
+        int i0=i;
+        i=(i+1)%limit;
+        return buf[i0];
+        }
 
+   bool put(T t) {
+        // if(available()<=0) return false;
+        buf[(i+n++)%limit]=t;
+        }
+
+   int available() {
+        return limit-n;
+        }
+
+   };
+
+*/
 template<class T, int limit> class channel_limited {
     std::queue<T>               inp;  // TODO: array queue ??
+    // circular<limit>          cap;
     std::mutex                  m;
     std::condition_variable     waitWrite,
-            waitRead;
-    bool                        closed=false;
+                                waitRead;
+    volatile bool    closed=false;
 
 public:
     bool read(T &data) {
