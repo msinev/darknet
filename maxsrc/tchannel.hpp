@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <queue>
 #include <mutex>
+//#include <cassert>
 
 template<class T> class channel_unlimited {
     std::queue<T>           inp;
@@ -22,6 +23,7 @@ public:
         while(inp.empty()) {
             if(closed) {
                 cv.notify_one();
+                lk.unlock();
                 return false;
             }
             else
@@ -30,14 +32,16 @@ public:
 
         data=inp.front();
         inp.pop();
-        lk.unlock();
         cv.notify_one();  // optional for single reader
+        lk.unlock();
         return true;
     }
 
     bool send(T data) {
         std::lock_guard<std::mutex> lk(m);
-        if(closed) return false;
+        if(closed) {
+            return false;
+        }
         inp.push(data);
         cv.notify_one();
         return true;
@@ -46,37 +50,52 @@ public:
     void close() {
         std::lock_guard<std::mutex> lk(m);
         closed=true;
+        cv.notify_one();
     }
 
 };
-/*
-template<class T, int limit> class circular {
-   T buf[limit];
-   n=0; i=0;
-   T&& get() {
-        int i0=i;
+
+template<class T, int limit, bool check=true> class circular {
+    volatile T buf[limit];
+    volatile int n=0, i=0;
+public:
+    inline bool get(T &t) {
+        if(check) if(empty()) {  return false; }
+        t=buf[i];
         i=(i+1)%limit;
-        return buf[i0];
-        }
+        n--;
+        return true;
+    }
 
-   bool put(T t) {
-        // if(available()<=0) return false;
+    inline bool put(T t) {
+        if(check) if(available()<=0) {  return false; }
         buf[(i+n++)%limit]=t;
-        }
+        return true;
+    }
 
-   int available() {
-        return limit-n;
-        }
-
-   };
-
+/*    bool put(T &&t) {
+        if(check) if(available()<=0) return false;
+        buf[(i+n++)%limit]=t;
+        return true;
+    }
 */
+
+    inline int available() {
+        return limit-n;
+    }
+
+    inline bool empty() {
+        return n==0;
+    }
+
+};
+
+
 template<class T, int limit> class channel_limited {
-    std::queue<T>               inp;  // TODO: array queue ??
-    // circular<limit>          cap;
+    circular<T, limit, false>   inp;
     std::mutex                  m;
     std::condition_variable     waitWrite,
-                                waitRead;
+            waitRead;
     volatile bool    closed=false;
 
 public:
@@ -84,27 +103,34 @@ public:
         std::unique_lock<std::mutex> lk(m);
         while(inp.empty())
             if(closed) {
-                waitWrite.notify_one();
+                waitRead.notify_one();
+                lk.unlock();
                 return false;
             } else
-                waitWrite.wait(lk);
-        data=inp.front();
-        inp.pop();
+                waitRead.wait(lk);
+        inp.get(data);
+        if(inp.available()==1) {
+            waitWrite.notify_one();
+        }
         if(!inp.empty()) {
-            waitWrite.notify_one();  // optional for single reader
+            waitRead.notify_one();
         }
         lk.unlock();
-        waitRead.notify_one();
         return true;
     }
 
     bool send(T data) {
         std::unique_lock<std::mutex> lk(m);
-        while(inp.size()>limit) if(closed) return false; else waitRead.wait(lk);
-        inp.push(data);
-        if(!inp.empty()) {
-            waitWrite.notify_one();  // optional for single reader
+        while(inp.available()<=0) {
+            if (closed) {
+                waitWrite.notify_one();
+                lk.unlock();
+                return false;
+            } else
+                waitWrite.wait(lk);
         }
+        inp.put(data);
+        waitRead.notify_one();  // optional for single writer
         lk.unlock();
         return true;
     }
@@ -112,6 +138,8 @@ public:
     void close() {
         std::lock_guard<std::mutex> lk(m);
         closed=true;
+        waitWrite.notify_one();  // optional for single reader
+        waitRead.notify_one();  // optional for single reader
     }
 
 };
