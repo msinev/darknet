@@ -3,10 +3,7 @@
 #include <chrono>
 #include <netinet/in.h>
 #include <thread>
-#include "Channels.h"
-
-
-
+#include "tchannel.hpp"
 
 
 int test1() {
@@ -113,7 +110,6 @@ int test01() {
                         }
     );
 
-// little endian if true
 
     auto t1 = std::chrono::high_resolution_clock::now();
     const long maxN=200;
