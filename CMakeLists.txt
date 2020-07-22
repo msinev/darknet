@@ -10,12 +10,12 @@ option(CMAKE_VERBOSE_MAKEFILE "Create verbose makefile" OFF)
 option(CUDA_VERBOSE_BUILD "Create verbose CUDA build" OFF)
 option(BUILD_SHARED_LIBS "Create dark as a shared library" OFF)
 option(BUILD_AS_CPP "Build Darknet using C++ compiler also for C files" OFF)
-option(BUILD_USELIB_TRACK "Build uselib_track" ON)
+option(BUILD_USELIB_TRACK "Build uselib_track" OFF)
 option(MANUALLY_EXPORT_TRACK_OPTFLOW "Manually export the TRACK_OPTFLOW=1 define" OFF)
 option(ENABLE_OPENCV "Enable OpenCV integration" ON)
 option(ENABLE_CUDA "Enable CUDA support" ON)
-option(ENABLE_CUDNN "Enable CUDNN" OFF)
-option(ENABLE_CUDNN_HALF "Enable CUDNN Half precision" OFF)
+option(ENABLE_CUDNN "Enable CUDNN" ON)
+option(ENABLE_CUDNN_HALF "Enable CUDNN Half precision" ON)
 option(ENABLE_ZED_CAMERA "Enable ZED Camera support" ON)
 option(ENABLE_VCPKG_INTEGRATION "Enable VCPKG integration" ON)
 
@@ -246,6 +246,7 @@ configure_file(
 )
 
 #look for all *.h files in src folder
+
 file(GLOB headers "${CMAKE_CURRENT_LIST_DIR}/src/*.h")
 #add also files in the include folder
 list(APPEND headers

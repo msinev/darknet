@@ -1,7 +1,9 @@
 //
 // Created by max on 23.05.2020.
 //
-
+#ifndef GPU
+#error fatal no GPU in build
+#endif
 #include "classifier.h"
 #include "darknet.h"
 #include <iostream>
@@ -27,7 +29,7 @@ extern "C" image mat_to_image(cv::Mat mat);  // not declared in headers AFAIK
 int main(int ac, char **av) {
 
     namespace po = boost::program_options;
-    std::string net_cfg_path, net_weight_path, video_path;
+    std::string net_cfg_path, net_weight_path, video_path, log_path("classes.data");
     po::options_description desc("options");
 //    std::string task_type;
     try {
@@ -35,10 +37,12 @@ int main(int ac, char **av) {
                 ("help,h", "Show help")
                 ("cfg,c", po::value<std::string>(&net_cfg_path), "Network config file")
                 ("video", po::value<std::string>(&video_path), "Video file")
+                ("out", po::value<std::string>(&log_path), "Data output file")
                 ("weights,w", po::value<std::string>(&net_weight_path), "Network weights file");
 
         po::positional_options_description pos_desc;
         pos_desc.add("video", 1);
+        pos_desc.add("out", 1);
 
         po::parsed_options parsed = po::command_line_parser(ac, av).options(desc).positional(pos_desc).run();
         po::variables_map vm;
@@ -73,7 +77,7 @@ int main(int ac, char **av) {
     std::cout << "Frames to go " << count << std::endl;
     uint64_t countDoneFrame = 0;
 
-    std::ofstream classesOut("classes.log");
+    std::ofstream classesOut(log_path);
 
     time_t begin, mark;
     time(&begin);

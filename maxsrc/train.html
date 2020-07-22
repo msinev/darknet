@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<PRE>
+Your filenames should be like 1_class_name.png
+where 1 in the above name could be any integer and class_name should be one of your class name such as dog, car etc. (remember, it should be one of the name from labels.list)
+Then make a list 'train.list' containing all paths of the image files use the find ~pwd/... >train.list command from the train_cifar tutorial , if you have your image files in one folder.
+Then make a labels.list file having all class_names
+then modify cifar.data according to your dataset as well as the number of classes at the end of the cfg file .
+Then run:
+./darknet classifier train your_data.data your_cfg.cfg
+
+</PRE>
+<H2>my.data</H2>
+<PRE>
+classes= 7
+names =  /home/max/ML/playnoplay/playnoplay.names
+train  = /home/max/ML/playnoplay/train.list
+valid =  /home/max/ML/playnoplay/validate.list
+backup = /home/max/ML/playnoplay/backup/
+</PRE>
+
+<H2>train.list</H2>
+<PRE>
+    data/1_play.jpg
+    data/1_closeup.jpg
+    data/1_other.jpg
+    data/1_graph.jpg
+    data/2_play.jpg
+    data/2_closeup.jpg
+    data/2_other.jpg
+    data/2_graph.jpg
+</PRE>
+
+<H2>validate.list</H2>
+<PRE>
+    data/1_play.jpg
+    data/7_closeup.jpg
+    data/2_other.jpg
+    data/1_graph.jpg
+</PRE>
+
+<H2>playnoplay.names</H2>
+<PRE>
+play
+serve
+closeup
+other
+graph
+overlay
+overview
+</PRE>
+
+<!-- OPTIONS=play:serve:closeup:other:graph:overlay:overview -->
+
+</body>
+</html>
