@@ -108,7 +108,7 @@ int main(int narg, char *sarg[]){
     makeVideo.release();
 
     // Closes all the frames
-    destroyAllWindows();
+    //destroyAllWindows();
 
     return 0;
 }
