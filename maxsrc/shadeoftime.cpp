@@ -89,7 +89,7 @@ int main(int narg, char *sarg[]){
 
        // imshow( "Frame", backlogImages );
       //  imshow( "FrameBW", grayImage );
-        makeVideo << backlogImages;
+       // makeVideo << backlogImages;
         if(n%100==0) {
             time_t tsNow=clock();
             long fps=n/((double)(tsNow-tsBegin)/CLOCKS_PER_SEC);
