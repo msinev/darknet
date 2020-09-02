@@ -328,6 +328,7 @@ target_include_directories(todata PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 
 add_executable(shadeoftime ${CMAKE_CURRENT_LIST_DIR}/maxsrc/shadeoftime.cpp)
 target_link_libraries(shadeoftime PRIVATE ${OpenCV_LINKED_COMPONENTS})
+target_link_libraries(shadeoftime PRIVATE pthread)
 target_include_directories(shadeoftime PUBLIC ${OpenCV_INCLUDE_DIRS})
 
 add_executable(readvideo ${CMAKE_CURRENT_LIST_DIR}/maxsrc/readvideo.cpp)
