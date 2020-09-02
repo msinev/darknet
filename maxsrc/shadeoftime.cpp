@@ -20,8 +20,10 @@ typedef tchannel::channel_limited<Mat,5> chanStage;
 void DoWrite(chanStage *in, char *path, int frameWidth, int frameHeight) {
     Mat image;
     cv::VideoWriter makeVideo;
+    auto fcc=VideoWriter::fourcc('m','p','4','v');
+//    auto fcc=VideoWriter::fourcc('h','2','6','4');
     makeVideo.open(path,
-                   VideoWriter::fourcc('X','2','6','4'), 30, cv::Size(frameWidth, frameHeight), true);
+                   fcc, 30, cv::Size(frameWidth, frameHeight), true);
 
     while (in->read(image)) {
         makeVideo << image;
@@ -66,7 +68,7 @@ void DoProcess(chanStage *in, chanStage *out, int frameWidth, int frameHeight) {
                     uchar c = *pixelG++;
                     auto &pp=pixel[j];
                     pp[2]=pp[1];
-                    pp[0]=pp[1];
+                    pp[1]=pp[0];
                     pp[0]=c;
                 }
             }

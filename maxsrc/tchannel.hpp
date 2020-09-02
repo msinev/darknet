@@ -12,13 +12,14 @@
 #include <mutex>
 //#include <cassert>
 namespace tchannel {
-    template<class T>
+    template<class T, int fuse=2000>
     class channel_unlimited {
         std::queue<T> inp;
         std::mutex m;
         std::condition_variable cv;
         volatile bool closed = false;
     public:
+        volatile bool fuse_broken = false;
         bool read(T &data) {
             std::unique_lock<std::mutex> lk(m);
             while (inp.empty()) {
@@ -39,6 +40,11 @@ namespace tchannel {
 
         bool send(T data) {
             std::lock_guard<std::mutex> lk(m);
+            if (inp.size()>fuse) {
+                closed = true;
+                fuse_broken = true;
+                cv.notify_one();
+            }
             if (closed) {
                 return false;
             }
