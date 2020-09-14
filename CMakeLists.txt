@@ -8,7 +8,7 @@ set(Darknet_VERSION ${Darknet_MAJOR_VERSION}.${Darknet_MINOR_VERSION}.${Darknet_
 
 option(CMAKE_VERBOSE_MAKEFILE "Create verbose makefile" OFF)
 option(CUDA_VERBOSE_BUILD "Create verbose CUDA build" OFF)
-option(BUILD_SHARED_LIBS "Create dark as a shared library" OFF)
+option(BUILD_SHARED_LIBS "Create dark as a shared library" ON)
 option(BUILD_AS_CPP "Build Darknet using C++ compiler also for C files" OFF)
 option(BUILD_USELIB_TRACK "Build uselib_track" OFF)
 option(MANUALLY_EXPORT_TRACK_OPTFLOW "Manually export the TRACK_OPTFLOW=1 define" OFF)
