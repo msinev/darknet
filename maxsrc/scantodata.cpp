@@ -18,6 +18,7 @@
 #include <iostream>
 #include "http_stream.h"
 #include "image_opencv.h"
+#include "kwset.h"
 //
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/document.h>
@@ -29,12 +30,11 @@
 //#include <map>
 //#include <set>
 #include <boost/program_options.hpp>
+#include <fstream>
 //
-
-
-static char **demo_names;
-static image **demo_alphabet;
-static int demo_classes;
+//static const char **demo_names;
+//static image **demo_alphabet;
+//static int demo_classes;
 
 static int nboxes = 0;
 static detection *dets = NULL;
@@ -45,8 +45,8 @@ static image det_s;
 
 static cap_cv *cap;
 static float fps = 0;
-static float demo_thresh = 0;
-static int demo_ext_output = 0;
+static float demo_thresh = 0; // passed to thresholds
+//static int demo_ext_output = 0;
 static long long int frame_id = 0;
 //static int demo_json_port = -1;
 
@@ -68,6 +68,9 @@ static const int thread_wait_ms = 1;
 static volatile int run_fetch_in_thread = 0;
 static volatile int run_detect_in_thread = 0;
 
+void scantodata(const char *cfgfile, const char *weightfile, float thresh,
+                const char *filename, const char **names, int classes,
+                const char *data_out, const char *out_filename);
 
 void *fetch_in_thread(void *ptr)
 {
@@ -168,54 +171,69 @@ int main(int narg, char **sarg) {
     std::cout << "To data scan" << std::endl;
     //
     namespace po = boost::program_options;
-    std::string db_path, json_path, datadb_name("data"), indexdb_name("index");
+/*
+    scantodata( const char *filename, char **names, int classes,
+    int frame_skip, char *prefix,  int dont_show, int ext_output,
+    ); */
+    std::string cfg_path, weight_path, in_video_path, out_video_path,  out_data_path, class_map_path;
+    float thresh=40.0;
+    classSet classes;
     po::options_description desc("options");
 
 //    std::string task_type;
-    std::string datamapconfig("/home/max/Videos/map.json");
-    long dbdatasize=2048;
+    //std::string datamapconfig("/home/max/Videos/map.json");
+   // long dbdatasize=2048;
 
     try {
 
         desc.add_options()
                 ("help,h", "Show help")
-                ("indexdb,i", po::value<std::string>(&indexdb_name), "Frame index database name")
-                ("datadb,d", po::value<std::string>(&datadb_name), "Data database name")
-                ("jsonpath,j", po::value<std::string>(&json_path), "Data file name")
-                ("map,m", po::value<std::string>(&datamapconfig),  "Data map path")
-                ("size,s", po::value<long>(&dbdatasize), "DB Data map size")
-                ("dbpath,p", po::value<std::string>(&db_path), "Database files location");
+                ("cfg,c", po::value<std::string>(&cfg_path), "Config file path")
+                ("weight,w", po::value<std::string>(&weight_path), "Weight file path")
+                ("map,m", po::value<std::string>(&class_map_path), "Class map")
+                ("threshold,t", po::value<float>(&thresh),  "Threshold probability in percents 0-100")
+                ("invideo,i", po::value<std::string>(&in_video_path), "Video input file")
+                ("outvideo,o", po::value<std::string>(&out_video_path), "Video output file")
+                ("outdata,j", po::value<std::string>(&out_data_path), "Data output file");
 
         po::positional_options_description pos_desc;
-        pos_desc.add("jsonpath", 1);
-        pos_desc.add("dbpath", 1);
+        pos_desc.add("invideo", 1);
+        pos_desc.add("cfg", 1);
+        pos_desc.add("weight", 1);
+        pos_desc.add("map", 1);
+        pos_desc.add("outdata", 1);
 
         po::parsed_options parsed = po::command_line_parser(narg, sarg).options(desc).positional(pos_desc).run();
         po::variables_map vm;
         po::store(parsed, vm);
         po::notify(vm);
 
-        if (indexdb_name.empty() || datadb_name.empty() || db_path.empty()  || json_path.empty() || vm.count("help")) {
+        if (cfg_path.empty()      || weight_path.empty()    ||
+            in_video_path.empty() || //out_video_path.empty() ||
+            out_data_path.empty() || class_map_path.empty() || vm.count("help")) {
             std::cout << "Cmd [options]\n" << desc << std::endl;
             return 1;
         }
 
+        classes.readSet( class_map_path );
+
     } catch (std::exception &ex) {
         std::cout << ex.what() << std::endl;
         return 2;
-    }
+        }
+
+
 /*
-    demo(char *cfgfile, char *weightfile,
-         float thresh, float hier_thresh,
-         int cam_index, const char *filename,
-         char **names, int classes,
-         int frame_skip, char *prefix,
-         char *out_filename, int mjpeg_port,
-         int json_port, int dont_show,
-         int ext_output, int letter_box_in,
-         int time_limit_sec, char *http_post_host,
-         int benchmark, int benchmark_layers);
-*/
+  void scantodata(const char *cfgfile, const char *weightfile, float thresh,
+                const char *filename, const char **names, int classes,
+                const char *data_out, const char *out_filename)  {
+ */
+    scantodata( cfg_path.c_str(), weight_path.c_str(), thresh/100.,
+                     in_video_path.c_str() , classes.names , classes.classes,
+                     out_data_path.c_str(), out_video_path.c_str());
+
+    classes.freeBuf();
+
     return 0;
 }
 /*
@@ -488,27 +506,33 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 }
 */
 
-void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *filename, char **names, int classes,
-          int frame_skip, char *prefix, char *out_filename,  int dont_show, int ext_output,
-          int benchmark, int benchmark_layers)
-{
+void scantodata(const char *cfgfile, const char *weightfile, float thresh,
+                const char *filename, const char **names, int classes,
+                const char *data_out, const char *out_filename)  {
+    std::ofstream data(data_out);
+
+    if(!data) {
+            printf("\n Failed opening %s \n", data_out);
+            //getchar();
+            exit(0);
+    }
+    //int benchmark,
 //    letter_box = letter_box_in;
     in_img = det_img = show_img = NULL;
     //skip = frame_skip;
     image **alphabet = load_alphabet();
-    int delay = frame_skip;
-    demo_names = names;
-    demo_alphabet = alphabet;
-    demo_classes = classes;
+    //demo_names = names;
+//    demo_alphabet = alphabet;
+//    demo_classes = classes;
     demo_thresh = thresh;
-    demo_ext_output = ext_output;
+
 //    demo_json_port = json_port;
-    printf("Demo\n");
-    net = parse_network_cfg_custom(cfgfile, 1, 1);    // set batch=1
+    printf("To data %s\n",data_out);
+    net = parse_network_cfg_custom((char*)cfgfile, 1, 1);    // set batch=1
     if(weightfile){
-        load_weights(&net, weightfile);
+        load_weights(&net, (char*)weightfile);
     }
-    net.benchmark_layers = benchmark_layers;
+   // net.benchmark_layers = benchmark_layers;
     fuse_conv_batchnorm(net);
     calculate_binary_weights(net);
     srand(2222222);
@@ -532,9 +556,9 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
     avg = (float *) calloc(l.outputs, sizeof(float));
     for(j = 0; j < NFRAMES; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
 
-    if (l.classes != demo_classes) {
-        printf("\n Parameters don't match: in cfg-file classes=%d, in data-file classes=%d \n", l.classes, demo_classes);
-        getchar();
+    if (l.classes != classes) {
+        printf("\n Parameters don't match: in cfg-file classes=%d, in data-file classes=%d \n", l.classes, classes);
+        //getchar();
         exit(0);
     }
 
@@ -560,14 +584,16 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
         detect_in_thread_sync(0); //fetch_in_thread(0);
         det_img = in_img;
         det_s = in_s;
-    }
+        }
 
     int count = 0;
+
+/*
     if(!prefix && !dont_show){
         int full_screen = 0;
         create_window_cv("Demo", full_screen, 1352, 1013);
     }
-
+*/
 
     write_cv* output_video_writer = NULL;
     if (out_filename && !flag_exit)
@@ -575,7 +601,7 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
         int src_fps = 25;
         src_fps = get_stream_fps_cpp_cv(cap);
         output_video_writer =
-                create_video_writer(out_filename, 'H', '2', '6', '4', src_fps, get_width_mat(det_img), get_height_mat(det_img), 1);
+                create_video_writer((char*)out_filename, 'H', '2', '6', '4', src_fps, get_width_mat(det_img), get_height_mat(det_img), 1);
 
         //'H', '2', '6', '4'
         //'D', 'I', 'V', 'X'
@@ -586,8 +612,8 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
         //'W', 'M', 'V', '2'
     }
 
-    int send_http_post_once = 0;
-    const double start_time_lim = get_time_point();
+//    int send_http_post_once = 0;
+//    const double start_time_lim = get_time_point();
     double before = get_time_point();
     double start_time = get_time_point();
     float avg_fps = 0;
@@ -601,7 +627,8 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
             detection *local_dets = dets;
             this_thread_yield();
 
-            if (!benchmark) custom_atomic_store_int(&run_fetch_in_thread, 1); // if (custom_create_thread(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
+            //if (!benchmark)
+            custom_atomic_store_int(&run_fetch_in_thread, 1); // if (custom_create_thread(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
             custom_atomic_store_int(&run_detect_in_thread, 1); // if (custom_create_thread(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
 
             //if (nms) do_nms_obj(local_dets, local_nboxes, l.classes, nms);    // bad results
@@ -616,7 +643,8 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
             printf("Objects:\n\n");
 
             ++frame_id;
-            char *send_buf = detection_to_json(dets, nboxes, classes, names, frame_id, NULL);
+            char *send_buf = detection_to_json(dets, nboxes, classes, (char**)names, frame_id, NULL);
+            data << send_buf;
 /*
             if (demo_json_port > 0) {
                 int timeout = 400000;
@@ -624,17 +652,19 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
             }
 */
             //char *http_post_server = "webhook.site/898bbd9b-0ddd-49cf-b81d-1f56be98d870";
+/*
             if (http_post_host && !send_http_post_once) {
                 int timeout = 3;            // 3 seconds
                 int http_post_port = 80;    // 443 https, 80 http
                 if (send_http_post_request(http_post_host, http_post_port, filename,
                                            local_dets, nboxes, classes, names, frame_id, ext_output, timeout))
-                {
+                    {
                     if (time_limit_sec > 0) send_http_post_once = 1;
-                }
+                    }
             }
-
-            if (!benchmark) draw_detections_cv_v3(show_img, local_dets, local_nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, demo_ext_output);
+*/
+//            if (!benchmark)
+//            draw_detections_cv_v3(show_img, local_dets, local_nboxes, demo_thresh, names, demo_alphabet, classes, demo_ext_output);
             free_detections(local_dets, local_nboxes);
 
             printf("\nFPS:%.1f \t AVG_FPS:%.1f\n", fps, avg_fps);
@@ -679,31 +709,35 @@ void scantodata(char *cfgfile, char *weightfile, float thresh,  const char *file
                 if(avg_fps > 180) this_thread_yield();
                 else this_thread_sleep_for(thread_wait_ms);   // custom_join(detect_thread, 0);
             }
-            if (!benchmark) {
+            //if (!benchmark)
+            {
                 while (custom_atomic_load_int(&run_fetch_in_thread)) {
                     if (avg_fps > 180) this_thread_yield();
                     else this_thread_sleep_for(thread_wait_ms);   // custom_join(fetch_thread, 0);
                 }
                 free_image(det_s);
             }
-
+/*
             if (time_limit_sec > 0 && (get_time_point() - start_time_lim)/1000000 > time_limit_sec) {
                 printf(" start_time_lim = %f, get_time_point() = %f, time spent = %f \n", start_time_lim, get_time_point(), get_time_point() - start_time_lim);
                 break;
             }
-
+*/
             if (flag_exit == 1) break;
 
-            if(delay == 0){
-                if(!benchmark) release_mat(&show_img);
+            //if(delay == 0)
+            {
+                //if(!benchmark)
+                 release_mat(&show_img);
                 show_img = det_img;
             }
             det_img = in_img;
             det_s = in_s;
         }
-        --delay;
-        if(delay < 0){
-            delay = frame_skip;
+      //  --delay;
+        //if(delay < 0)
+        {
+        //    delay = frame_skip;
 
             //double after = get_wall_time();
             //float curr = 1./(after - before);

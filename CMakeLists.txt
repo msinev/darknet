@@ -322,7 +322,7 @@ target_include_directories(classifier PUBLIC Boost_INCLUDE_DIR)
 target_link_libraries(classifier PRIVATE ${Boost_LIBRARIES})
 
 #if(OpenCV_FOUND)
-add_executable(todata ${CMAKE_CURRENT_LIST_DIR}/maxsrc/scantodata.cpp ${CMAKE_CURRENT_LIST_DIR}/maxsrc/tchannel.hpp)
+add_executable(todata ${CMAKE_CURRENT_LIST_DIR}/maxsrc/scantodata.cpp ${CMAKE_CURRENT_LIST_DIR}/maxsrc/tchannel.hpp maxsrc/kwset.cpp)
 target_link_libraries(todata PRIVATE ${OpenCV_LINKED_COMPONENTS})
 target_include_directories(todata PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_include_directories(todata PUBLIC ${CMAKE_CURRENT_LIST_DIR}/src)
