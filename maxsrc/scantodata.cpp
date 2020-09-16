@@ -186,6 +186,9 @@ int main(int narg, char **sarg) {
 
     try {
 
+/*
+ *  ... -i /home/max/Videos/shade/tennis3.shades.mkv -c yolov3-tiny.cfg -w yolov3-tiny.weights -m obj.names -o labels.mp4 -j labels.mp4.json
+ */
         desc.add_options()
                 ("help,h", "Show help")
                 ("cfg,c", po::value<std::string>(&cfg_path), "Config file path")
@@ -520,7 +523,7 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
 //    letter_box = letter_box_in;
     in_img = det_img = show_img = NULL;
     //skip = frame_skip;
-    image **alphabet = load_alphabet();
+    //image **alphabet = load_alphabet();
     //demo_names = names;
 //    demo_alphabet = alphabet;
 //    demo_classes = classes;
@@ -644,7 +647,7 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
 
             ++frame_id;
             char *send_buf = detection_to_json(dets, nboxes, classes, (char**)names, frame_id, NULL);
-            data << send_buf;
+            data  << send_buf << "\n\n";
 /*
             if (demo_json_port > 0) {
                 int timeout = 400000;
@@ -780,6 +783,7 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
 
     free_ptrs((void **)names, net.layers[net.n - 1].classes);
 
+    /*
     int i;
     const int nsize = 8;
     for (j = 0; j < nsize; ++j) {
@@ -789,6 +793,7 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
         free(alphabet[j]);
     }
     free(alphabet);
+    */
     free_network(net);
     //cudaProfilerStop();
 }
