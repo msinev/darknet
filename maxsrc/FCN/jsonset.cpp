@@ -35,8 +35,10 @@ static char incROW() {
 int main() {
     rollingdata data;
     data.Allocate(3, 5, 4);
+
     data.Append(rowData);
     data.Print();
+
     std::cout << incROW() << std::endl;
     data.Append(rowData+1);
     data.Print();

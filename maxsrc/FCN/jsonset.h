@@ -6,6 +6,10 @@
 #define DARKNET_JSONSET_H
 #include <cstring>
 #include <algorithm>
+
+// Externally rolling dataset
+// Slower but simpler than GPU
+
 struct rollingdata {
 
     float *buf;
