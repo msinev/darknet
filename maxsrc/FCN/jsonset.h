@@ -22,7 +22,12 @@ protected:
         }
 
     void Append(float *row) {
-        memcpy(sizeof(float))
+
+        if(++slidePosition==rowsCount) {
+            memcpy(&buf[slidePosition&rowSize], rowSize*sizeof(float))
+        } else {
+
+        }
     }
 };
 
