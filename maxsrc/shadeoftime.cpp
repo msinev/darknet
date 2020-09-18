@@ -103,9 +103,7 @@ int main(int narg, char *sarg[]){
     long frameWidth=cap.get(cv::CAP_PROP_FRAME_WIDTH);
 
     //cap.set(CAP_PROP_FPS, 200);
-
     //
-
 
     chanStage stageRead, stageWrite;
 
@@ -119,8 +117,7 @@ int main(int narg, char *sarg[]){
     std::thread ThProcess(DoProcess, &stageRead, &stageWrite,  frameWidth, frameHeight);
     time_t tsBegin=clock();
 
-    while(1){
-
+    while(1)  {
         Mat frame;
         // Capture frame-by-frame
         cap >> frame;
@@ -147,16 +144,15 @@ int main(int narg, char *sarg[]){
         //char c=(char)waitKey(0);
         //if(c==27)
          //   break;
-    }
+         }
 
     // When everything done, release the video capture object
     cap.release();
     stageRead.close();
     ThProcess.join();
     ThWriter.join();
-
     // Closes all the frames
     //destroyAllWindows();
-
     return 0;
+
 }
