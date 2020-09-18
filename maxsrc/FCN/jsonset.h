@@ -18,17 +18,21 @@ struct rollingdata {
     }
 protected:
     void Allocate(int row, int rows, int slide=100) {
-        buf=new float[row*rows*slide];
+        buf=new float[row*(rows+slide)];
         }
 
     void Append(float *row) {
-
-        if(++slidePosition==rowsCount) {
-            memcpy(&buf[slidePosition&rowSize], rowSize*sizeof(float))
-        } else {
-
+        if(++slidePosition==slideStep) {
+            memcpy(&buf[0], &buf[slideStep], rowSize*(rowsCount-1)*sizeof(float) );
+            slidePosition=rowsCount-1;
         }
+        memcpy(&buf[slidePosition*rowSize], row, rowSize*sizeof(float) );
     }
+    void Print(float *row) {
+        int r0=max(0, slidePosition-rowsCount); i
+        for(int i=)
+    }
+
 };
 
 
