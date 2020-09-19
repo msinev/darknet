@@ -1,7 +1,8 @@
 //
 // Created by max on 19.09.2020.
 //
-
+#include "jsonset.h"
+#include <iostream>
 
 float rowData[]={1,2,3,4,5,6,7,8};
 
