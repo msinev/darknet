@@ -8,6 +8,10 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 #include "darknet.h"
+extern "C" {
+#include "utils.h"
+}
+#include "option_list.h"
 
 void trainme(const std::vector<std::string> &labels, const std::vector<std::vector<boost::filesystem::path>> &imgs,
              boost::filesystem::path cfgfile, boost::filesystem::path weightfile,
@@ -44,12 +48,12 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
     list *options = read_data_cfg((char*)cfgfile.c_str());
 
     int N = 0;
-
+/*
     BOOST_FOREACH( const std::vector<boost::filesystem::path> &namel, imgs )
     {
         N+=namel.size();
     }
-
+*/
     // = option_find_str(options, "backup", "/backup/");
     //int tag = option_find_int_quiet(options, (char*)"tag", 0);
 
