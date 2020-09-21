@@ -40,14 +40,16 @@ void DoTest(chanData *out, int frameOffset, int frameGap) {
     do {
         n++;
         w=(n<frameOffset)?0:(((n-frameOffset)/frameGap)%2);
+    //    std::cout << "-- "  << w << std::endl;
+
     }
     while (out->send(w));
 
-
+    std::cout << "!! "  << n << std::endl;
 }
 
 void DoProcess(chanStage *in, chanStage *out, chanData *left, chanData *right, int frameWidth, int frameHeight) {
-    Mat image, backlogImages;
+    Mat image;
 //    long n=0;
 
     while (in->read(image)) {
@@ -64,8 +66,9 @@ void DoProcess(chanStage *in, chanStage *out, chanData *left, chanData *right, i
             // cvtColor(frame, grayImage, cv::COLOR_BGR2GRAY);
             // Display the resulting frame
             for (int i = 0; i < frameHeight; ++i)    {
-                cv::Vec3b* pixel = backlogImages.ptr<cv::Vec3b>(i); // point to first pixel in row
-                uchar* pixelG = grayImage.ptr<uchar>(i);      // point to first color in row
+                cv::Vec3b*  pixel  = image.ptr<cv::Vec3b>(i); // point to first pixel in row
+                uchar*      pixelG = grayImage.ptr<uchar>(i);         // point to first color in row
+//
                 for (int j = 0; j < frameWidth; ++j)       {
                     uchar c = *pixelG++;
                     auto &pp=pixel[j];
@@ -87,7 +90,7 @@ void DoProcess(chanStage *in, chanStage *out, chanData *left, chanData *right, i
                 }
 
 
-        out->send( backlogImages.clone() );
+        out->send( image.clone() );
         }
     std::cout << "Closing output" << std::endl;
     out->close();

@@ -21,8 +21,7 @@ void DoWrite(chanStage *in, char *path, int frameWidth, int frameHeight) {
     cv::VideoWriter makeVideo;
     auto fcc=VideoWriter::fourcc('m','p','4','v');
 //    auto fcc=VideoWriter::fourcc('h','2','6','4');
-    makeVideo.open(path,
-                   fcc, 30, cv::Size(frameWidth, frameHeight), true);
+    makeVideo.open(path,  fcc, 30, cv::Size(frameWidth, frameHeight), true);
 
     while (in->read(image)) {
         makeVideo << image;
