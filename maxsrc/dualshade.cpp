@@ -48,6 +48,27 @@ void DoTest(chanData *out, int frameOffset, int frameGap) {
     std::cout << "!! "  << n << std::endl;
 }
 
+void DoRanges(chanData *out, std::string path) {
+    ifstream in(path);
+
+    int n=0;
+    int w;
+    do {
+        n++;
+        if(in) {
+
+        } else {
+            w=0;
+        }
+        //    std::cout << "-- "  << w << std::endl;
+
+    }
+    while (out->send(w));
+
+    std::cout << "!! "  << n << std::endl;
+}
+
+
 void DoProcess(chanStage *in, chanStage *out, chanData *left, chanData *right, int frameWidth, int frameHeight) {
     Mat image;
 //    long n=0;
