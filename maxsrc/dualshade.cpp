@@ -5,6 +5,7 @@
 #include "shadeoftime.h"
 #include "opencv2/opencv.hpp"
 #include <iostream>
+#include <fstream>
 #include <thread>
 #include "tchannel.hpp"
 
