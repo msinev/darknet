@@ -8,6 +8,13 @@
 #include <fstream>
 #include <thread>
 #include "tchannel.hpp"
+//
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+#include "rapidjson/stringbuffer.h"
+#include <rapidjson/writer.h>
+//
 
 using namespace std;
 using namespace cv;
@@ -49,18 +56,71 @@ void DoTest(chanData *out, int frameOffset, int frameGap) {
     std::cout << "!! "  << n << std::endl;
 }
 
+std::string trim(const std::string& str, char c)
+{
+    size_t first = str.find_first_not_of(c);
+    if (std::string::npos == first)
+    {
+        return str;
+    }
+    size_t last = str.find_last_not_of(c);
+    return str.substr(first, (last - first + 1));
+}
+
+const char tagFrom[]="BeginFrame";
+const char tagTill[]="EndFrame";
+
 void DoRanges(chanData *out, std::string path) {
     ifstream in(path);
 
-    int n=0;
+    int64_t n=0;
     int w;
+
+    int64_t MaxRange=0, MinRange;
+
     do {
         n++;
-        if(in) {
+        if(n<MaxRange) {
+             w=(n>MinRange)?1:0;
+        } else if(in) {
+            w=0;
+            std::string line;
+            nl:;
+            if(std::getline(in, line)) {
+                if(line.empty()) goto nl; // just for fun
+                rapidjson::Document doc;
+                doc.Parse(line.c_str());
+
+                if( doc.HasParseError() ) {
+                    std::cerr <<"JSON "<< line <<" Parsing Failed" << std::endl;
+                    goto eol;
+                }
+
+                if(!doc.IsObject()) {
+                    std::cerr <<"JSON "<< line <<" Not Object" << std::endl;
+                    goto eol;
+                }
+                const rapidjson::Value &valMin = doc[tagFrom]; //make object value
+                if(!valMin.IsInt64()) {
+                    std::cerr <<"JSON "<< tagFrom <<"Int Not Found" << std::endl;
+                    goto eol;
+                }
+                const rapidjson::Value &valMax = doc[tagTill]; //make object value
+                if(!valMax.IsInt64()) {
+                    std::cerr <<"JSON "<< tagTill <<"Int Not Found" << std::endl;
+                    goto eol;
+                }
+                MinRange=valMin.GetInt64();
+                MaxRange=valMax.GetInt64();
+                w=(n>MinRange)?1:0;
+            }
+            //std:istringstream (line);
 
         } else {
             w=0;
         }
+        eol:;
+
         //    std::cout << "-- "  << w << std::endl;
 
     }
