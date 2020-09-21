@@ -337,6 +337,13 @@ target_link_libraries(shadeoftime PRIVATE ${OpenCV_LINKED_COMPONENTS})
 target_link_libraries(shadeoftime PRIVATE pthread)
 target_include_directories(shadeoftime PUBLIC ${OpenCV_INCLUDE_DIRS})
 
+add_executable(dualshade ${CMAKE_CURRENT_LIST_DIR}/maxsrc/dualshade.cpp)
+target_link_libraries(dualshade PRIVATE ${OpenCV_LINKED_COMPONENTS})
+target_link_libraries(dualshade PRIVATE pthread)
+target_include_directories(dualshade PUBLIC ${OpenCV_INCLUDE_DIRS})
+
+
+
 add_executable(readvideo ${CMAKE_CURRENT_LIST_DIR}/maxsrc/readvideo.cpp)
 target_link_libraries(readvideo PRIVATE ${OpenCV_LINKED_COMPONENTS})
 target_include_directories(readvideo PUBLIC ${OpenCV_INCLUDE_DIRS})

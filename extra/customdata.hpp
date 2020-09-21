@@ -2,8 +2,8 @@
 // Created by max on 21.03.19.
 //
 
-#ifndef CLASSIFY_IMAGES_HPP
-#define CLASSIFY_IMAGES_HPP
+#ifndef CUSTOM_DATASET_HPP
+#define CUSTOM_DATASET_HPP
 //#define OPENCV 1
 #define GPU 1
 #include <iostream>
@@ -14,7 +14,6 @@
 #include <boost/process/environment.hpp>
 #include <boost/foreach.hpp>
 #include "darknet.h"
-#include "methods.h"
 #ifdef OPENCVFIX
 #include <math.h>
 static inline int cvRound(float value)
