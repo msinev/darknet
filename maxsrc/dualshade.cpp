@@ -184,8 +184,8 @@ int main(int narg, char *sarg[]){
     // Create a VideoCapture object and open the input file
     // If the input is the web camera, pass 0 instead of the video file name
 
-    if(narg != 3){
-        cerr << "Error Invalid syntax\n" << sarg[0] << " In Out" << endl;
+    if(narg != 5){
+        cerr << "Error Invalid syntax\n" << sarg[0] << " In Out Left.json Right.json " << endl;
         return -1;
     }
 
@@ -213,8 +213,8 @@ int main(int narg, char *sarg[]){
     int n=0;
     Mat backlogImages;
 
-    std::thread ThProcessTest1(DoTest, &stageLeft, 1000, 300);
-    std::thread ThProcessTest2(DoTest, &stageRight, 500, 300);
+    std::thread ThProcessLeft(DoRanges, &stageLeft, sarg[3]);
+    std::thread ThProcessRight(DoRanges, &stageRight, sarg[4]);
 
     std::thread ThWriter(DoWrite, &stageWrite, sarg[2], frameWidth, frameHeight);
 
