@@ -13,6 +13,77 @@ extern "C" {
 }
 #include "option_list.h"
 
+class dataBuilder {
+public:
+    virtual data buildData()=0;
+};
+
+class dirRandomLabelDataBuilder: public dataBuilder {
+    const std::vector<std::vector<boost::filesystem::path>> imgs;
+    const std::vector<std::string> labels;
+    const networkInput &netParam;
+    int batch;
+public:
+    dirRandomLabelDataBuilder(const  std::vector<std::vector<boost::filesystem::path>> &im,
+                              const  std::vector<std::string> &l, const networkImageInput &p, int batchSize=32):
+            imgs(im), labels(l), batch(batchSize), netParam(p) { }
+
+
+    void setBatch(int b) {
+        batch=b;
+    }
+
+    data buildData() override {
+        data d={0, 0};
+
+        int nLabels=imgs.size();
+
+
+        d.shallow = 0;
+        d.w=netParam.getWidth();
+        d.h=netParam.getHeight();
+        d.X=verticalVector(batch);
+        d.y=make_matrix(batch, nLabels);
+
+        for(int i=0; i<batch; i++) {
+// choose random image
+            int iLabel=rand()%imgs.size();
+            int iImage=rand()%imgs[iLabel].size();
+            auto path=imgs[iLabel][iImage];
+
+// load choosen image
+            imageCropLoader loader(path, netParam);
+            d.X.vals[i]=loader.getImage().data;
+// set label's Neuron to 1.0 (and rest is 0) - target output
+            auto targetVector=d.y.vals[i];
+            memset(targetVector, 0, sizeof(targetVector[0])*nLabels);
+            //std::cerr << iLabel << " ";
+            targetVector[iLabel]=1.0;
+        }
+
+        int i;
+
+        return d;
+/*
+     // label paths (char **paths, int n, char **labels, int k, tree *hierarchy)
+
+        if(m) paths = me_get_random_paths(paths, n, m);
+        data d = {0};
+        d.shallow = 0;
+        d.w=size;
+        d.h=size;
+// !!
+        d.X = me_load_image_augment_paths(paths, n, min, max, size, angle, aspect, hue, saturation, exposure, center);
+        d.y = me_load_labels_paths(paths, n, labels, k, hierarchy);
+        data d={0, 0};
+
+        return d;
+*/
+    }
+
+};
+
+
 void trainme(const std::vector<std::string> &labels, const std::vector<std::vector<boost::filesystem::path>> &imgs,
              boost::filesystem::path cfgfile, boost::filesystem::path weightfile,
              boost::filesystem::path backup_directory,
@@ -106,7 +177,7 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
     //std::vector<std::string> &l, networkImageInput &p,
     int epoch = (*net->seen)/N;
 
-    networkSizeImageInput netp(net);
+    //networkSizeImageInput netp(net);
 
     dirRandomLabelDataBuilder dataBuilder(imgs, labels, netp, 2048 /*?some?*/);
 
@@ -116,7 +187,8 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
 
     std::cout << "Data batch loaded" << std::endl;
     /*
-        pthread_t load_thread;
+
+      pthread_t load_thread;
       args.d = &buffer;
       load_thread = me_load_data(args);
 
