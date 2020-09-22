@@ -18,6 +18,10 @@ public:
     virtual data buildData()=0;
 };
 
+class networkInput {
+    
+};
+
 class dirRandomLabelDataBuilder: public dataBuilder {
     const std::vector<std::vector<boost::filesystem::path>> imgs;
     const std::vector<std::string> labels;
@@ -25,7 +29,7 @@ class dirRandomLabelDataBuilder: public dataBuilder {
     int batch;
 public:
     dirRandomLabelDataBuilder(const  std::vector<std::vector<boost::filesystem::path>> &im,
-                              const  std::vector<std::string> &l, const networkImageInput &p, int batchSize=32):
+                              const  std::vector<std::string> &l, const networkInput &p, int batchSize=32):
             imgs(im), labels(l), batch(batchSize), netParam(p) { }
 
 
