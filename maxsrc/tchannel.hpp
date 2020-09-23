@@ -87,11 +87,11 @@ namespace tchannel {
     }
 */
 
-        inline int available() {
+        inline int available() const {
             return limit - n;
         }
 
-        inline bool empty() {
+        inline bool empty() const {
             return n == 0;
         }
 

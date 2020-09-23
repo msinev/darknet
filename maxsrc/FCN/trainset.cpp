@@ -18,8 +18,14 @@ public:
     virtual data buildData()=0;
 };
 
-class networkInput {
-    
+struct networkInput {
+    int size;
+    int batch;
+
+    networkInput(int s): batch(1), size(s) { }
+
+    virtual int getWidth() const { return  size; }
+    virtual const int getHeight() const { return  batch; }
 };
 
 class dirRandomLabelDataBuilder: public dataBuilder {
