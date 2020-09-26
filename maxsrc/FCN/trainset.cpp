@@ -7,16 +7,18 @@
 #include <boost/process.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <network.h>
+#include <parser.h>
 #include "darknet.h"
+#include "matrix.h"
+#include "customdata.hpp"
 extern "C" {
 #include "utils.h"
 }
 #include "option_list.h"
+#include "jsonset.h"
 
-class dataBuilder {
-public:
-    virtual data buildData()=0;
-};
+
 
 struct networkInput {
     int size;
@@ -62,8 +64,10 @@ public:
             auto path=imgs[iLabel][iImage];
 
 // load choosen image
-            imageCropLoader loader(path, netParam);
-            d.X.vals[i]=loader.getImage().data;
+            rollingdata datain();
+            //imageCropLoader loader(path, netParam);
+            //json
+            d.X.vals[i]=datain().buf;//loader.getImage().data;
 // set label's Neuron to 1.0 (and rest is 0) - target output
             auto targetVector=d.y.vals[i];
             memset(targetVector, 0, sizeof(targetVector[0])*nLabels);
@@ -189,14 +193,14 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
 
     //networkSizeImageInput netp(net);
 
-    dirRandomLabelDataBuilder dataBuilder(imgs, labels, netp, 2048 /*?some?*/);
+//    dirRandomLabelDataBuilder dataBuilder(imgs, labels, netp, 2048 /*?some?*/);
 
     std::cout << "Building data batch" << std::endl;
-
+/*
     train=dataBuilder.buildData();
 
     std::cout << "Data batch loaded" << std::endl;
-    /*
+
 
       pthread_t load_thread;
       args.d = &buffer;
@@ -229,9 +233,10 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
           }
 
           pthread_join(load_thread, 0);
+    */
           train = buffer;
-          load_thread = load_data(args);
-  */
+    //      load_thread = load_data(args);
+
 
     time = what_time_is_it_now();
     printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
@@ -241,34 +246,28 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
     const int scale=1000;
     const int timescale=60*15;
 
-#ifdef GPU
-    if(ngpus == 1){
-            std::cerr << "Train network single GPU (repeat max "<< scale <<" times max "<<timescale<<"s)" << std::endl;
-            for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
-                loss = train_network(net, train);
-                std::cout << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
-            }
-        } else {
-            std::cerr << "Train network multiple GPU" << std::endl;
-            loss = train_networks(nets, ngpus, train, 4);
-        }
-#else
-    loss = train_network(net, train);
-#endif
+
+    assert(ngpus == 1);
+    std::cerr << "Train network single GPU (repeat max "<< scale <<" times max "<<timescale<<"s)" << std::endl;
+    for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
+       loss = train_network(*net, train);
+       std::cout << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
+       }
+    
     if(avg_loss == -1) avg_loss = loss;
     avg_loss = avg_loss*.9 + loss*.1;
-    printf("%ld, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(net), what_time_is_it_now()-time, *net->seen);
+    printf("%ld, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-time, *net->seen);
     free_data(train);
     if(*net->seen/N > epoch) {
         epoch = *net->seen/N;
         char buff[256];
         sprintf(buff, "%s/%s_%d.weights",backup_directory.c_str(),base, epoch);
-        save_weights(net, buff);
+        save_weights(*net, buff);
     }
-    if(get_current_batch(net)%1000 == 0){
+    if(get_current_batch(*net)%1000 == 0){
         char buff[256];
         sprintf(buff, "%s/%s.backup",backup_directory.c_str(),base);
-        save_weights(net, buff);
+        save_weights(*net, buff);
     }
 
 
@@ -277,98 +276,116 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
     //sprintf(buff, "%s/%s.weights", backup_directory.c_str(), base);
 //    pthread_join(load_thread, 0);
     std::cout << "Saving file: " << weightfile << std::endl;
-    save_weights(net, (char *)weightfile.c_str());
-    free_network(net);
+    save_weights(*net, (char *)weightfile.c_str());
+    free_network(*net);
     //free_list(plist);
     free(base);
 }
+static bool IsFile(boost::filesystem::path &path, std::string spath) {
+
+    if(!boost::filesystem::exists(spath) || !boost::filesystem::is_regular_file(spath)) {
+        std::cerr << spath << " not a file" << std::endl;
+        return false;
+    }
+    path=boost::filesystem::path(spath);
+    return true;
+}
+
+static bool IsDir(boost::filesystem::path &path, std::string spath) {
+
+    if(!boost::filesystem::exists(spath) || !boost::filesystem::is_directory(spath)) {
+        std::cerr << spath << " not a file" << std::endl;
+        return false;
+    }
+    path=boost::filesystem::path(spath);
+    return true;
+}
 
 
-int main(int argc, char *argv[]) {
+int main(int narg, char *sarg[]) {
+    //
     std::vector<int> gpus(1);
+    //
+    std::cout << "" << std::endl;
+    //
+    namespace po = boost::program_options;
 
-    auto e = boost::this_process::environment();
-    std::list<boost::filesystem::path> path;
-    path.push_back( boost::filesystem::path(e["HOME"].to_string()) );
+    std::string cfg_path, backup_path, weight_path, in_data_path,  out_data_path, class_map_path;
+    float thresh=40.0;
+    long max_loop=100000;
+    po::options_description desc("options");
+
+//    std::string task_type;
+    //std::string datamapconfig("/home/max/Videos/map.json");
+    // long dbdatasize=2048;
+
+    try {
+
+        desc.add_options()
+                ("help,h", "Show help")
+                ("backup,b", po::value<std::string>(&backup_path), "Backup dir path")
+                ("netcfg,c", po::value<std::string>(&cfg_path), "Config file path")
+                ("weight,w", po::value<std::string>(&weight_path), "Weight file(s) path")
+                ("input,i", po::value<std::string>(&class_map_path), "Input data")
+                ("threshold,t", po::value<float>(&thresh),  "Threshold to stop testing 0-100%")
+                ("expected,x", po::value<std::string>(&out_data_path), "Expected data file")
+                ("maxloop,m", po::value<long>(&max_loop), "Data output file");
+
+        po::positional_options_description pos_desc;
+        pos_desc.add("netcfg", 1);
 
 
-    std::istringstream is(e["DATA"].to_string());
-    std::string s;
+        pos_desc.add("input", 1);
+        pos_desc.add("expected", 1);
 
-    while (std::getline(is, s, ':')) {
-        boost::filesystem::path newchunk(s);
-        if( !boost::filesystem::exists(newchunk) ) {
-            std::cerr << newchunk << " path not exists" << std::endl;
-            continue;
+        pos_desc.add("backup", 1);
+        pos_desc.add("threshold", 1);
+        pos_desc.add("weight", 1);
+
+        po::parsed_options parsed = po::command_line_parser(narg, sarg).options(desc).positional(pos_desc).run();
+        po::variables_map vm;
+        po::store(parsed, vm);
+        po::notify(vm);
+
+        if (cfg_path.empty()      || weight_path.empty()    ||
+            in_data_path.empty() ||  out_data_path.empty() ||
+            backup_path.empty() /*|| class_map_path.empty()*/ || vm.count("help")) {
+            std::cout << "Cmd [options] cfg in exp backup [thresh] [weight]\n" << desc << std::endl;
+            return 1;
         }
 
-        if(!boost::filesystem::is_directory(newchunk)) {
-            std::cerr << newchunk << " path not directory" << std::endl;
-            continue;
+        //classes.readSet( class_map_path );
+
+    } catch (std::exception &ex) {
+        std::cout << ex.what() << std::endl;
+        return 2;
+    }
+
+
+    if(!boost::filesystem::exists(backup_path) || !boost::filesystem::is_directory(backup_path)) {
+        std::cerr << backup_path << "not a directrory" << std::endl;
+        return 2;
         }
 
-        //    std::cerr << newchunk << " appended" << std::endl;
-
-        path.push_back(newchunk);
+    if(!boost::filesystem::exists(cfg_path) || !boost::filesystem::is_directory(cfg_path)) {
+        std::cerr << cfg_path << "not a file" << std::endl;
+        return 2;
     }
 
+    boost::filesystem::path  backupDir, weightFile, networkCfg, inputFile, outputFile;
 
-    //auto root=home / "break";
+    if(  !IsDir(backupDir,  backup_path)  |
+         !IsFile( weightFile, weight_path) |
+         !IsFile( networkCfg, cfg_path) |
+         !IsFile( inputFile, in_data_path) |
+         !IsFile( outputFile, in_data_path)
+        ) {
+            return 1;
 
-    //root=boost::filesystem::current_path();
-
-    //environment e = this_process::environment();
-    //std::list<boost::filesystem::path> file;
-
-
-    std::cout << "Path:" << std::endl;
-    for(auto it = path.begin(); it != path.end(); ++it) {
-        std::cout << *it << std::endl;
-    }
-
-    boost::filesystem::path trainDir, backupDir, weightFile, networkCfg;
-
-    if( !(  checkDirPath(trainDir,    "data/train",        path)  &&
-            checkDirPath(backupDir,   "data/backup",       path)  &&
-            checkFilePath(networkCfg, "data/network.cfg",  path)  ) /**/ ) {
-
-        std::cout << "Data not found" << std::endl;
-        return 1;
-
-    }
-
-    std::vector<std::string> names;
-
-    boost::filesystem::directory_iterator it{trainDir};
-    // std::cout << *it++ << '\n';
-    while (it != boost::filesystem::directory_iterator{}) {
-        auto cwd=(*it++).path();
-        auto name=cwd.filename().string();
-        names.push_back(name);
-
-    }
-    std::sort(names.begin(), names.end(), std::greater<std::string>());
-
-    std::cout << "-------------- 1 ----------------" << std::endl;
-
-    std::vector<std::vector<boost::filesystem::path>> imgs(names.size());
-    int ns=0;
-    BOOST_FOREACH( std::string namel, names )
-    {
-        boost::filesystem::path imgDir=trainDir/boost::filesystem::path(namel);
-        std::cout << imgDir << std::endl;
-
-        boost::filesystem::directory_iterator it{imgDir};
-        // std::cout << *it++ << '\n';
-        while (it != boost::filesystem::directory_iterator{}) {
-            auto cwd=(*it++).path();
-            //auto name=cwd.filename().string();
-            imgs[ns].push_back(cwd);
         }
 
-        std::cout << " == " << namel << " -> " << imgs[ns].size() << std::endl;
-        ns++;
-    }
+
+//    std::vector<std::vector<boost::filesystem::path>> imgs(names.size());
 
     std::cout << "-------------- 2 ----------------" << std::endl;
 /*
@@ -377,11 +394,8 @@ void trainme(boost::filesystem::path cfgfile, boost::filesystem::path weightfile
                          int *gpus, int ngpus, int clear, int classes=2)
 
  */
-    int clear=!checkFilePath(weightFile, "data/weights.data", path);
-    if(clear) {
-        weightFile=boost::filesystem::path(e["HOME"].to_string())/"data/weights.data";
-    }
-    trainme(names, imgs, networkCfg, weightFile, backupDir, &gpus[0], gpus.size(), clear);
+
+  //  trainme(names, imgs, networkCfg, weightFile, backupDir, &gpus[0], gpus.size(), clear);
 //    checkDirPath(file, "data.test", path);
     //std::cout << "Hello world\n" << "from " << root << std::endl;
     return 0;

@@ -12,8 +12,10 @@
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+
 #include "rapidjson/stringbuffer.h"
 #include <rapidjson/writer.h>
+
 //
 
 using namespace std;
@@ -148,18 +150,18 @@ void DoProcess(chanStage *in, chanStage *out, chanData *left, chanData *right, i
             // cvtColor(frame, grayImage, cv::COLOR_BGR2GRAY);
             // Display the resulting frame
             for (int i = 0; i < frameHeight; ++i)    {
-                cv::Vec3b*  pixel  = image.ptr<cv::Vec3b>(i); // point to first pixel in row
-                uchar*      pixelG = grayImage.ptr<uchar>(i);         // point to first color in row
+                cv::Vec3b*  pixel  = image.ptr<cv::Vec3b>(i);   // point to first pixel in row
+                uchar*      pixelG = grayImage.ptr<uchar>(i);   // point to first color in row
 //
                 for (int j = 0; j < frameWidth; ++j)       {
                     uchar c = *pixelG++;
                     auto &pp=pixel[j];
-                    bool g=false;
+                    bool g;
 
                     if(j<=frameWidth/2) {
-                        g=(fLeft!=0);
+                        g=(fLeft==0);
                     } else {
-                        g=(fRight!=0);
+                        g=(fRight==0);
                     }
 
                     if(g) {
@@ -171,8 +173,8 @@ void DoProcess(chanStage *in, chanStage *out, chanData *left, chanData *right, i
                     }
                 }
 
-
-        out->send( image.clone() );
+        if(fRight || fLeft)
+            out->send( image.clone() );
         }
     std::cout << "Closing output" << std::endl;
     out->close();
@@ -186,6 +188,7 @@ int main(int narg, char *sarg[]){
 
     if(narg != 5){
         cerr << "Error Invalid syntax\n" << sarg[0] << " In Out Left.json Right.json " << endl;
+        cerr << "One json per line with BeginFrame & EndFrame numbers" << endl;
         return -1;
     }
 
@@ -215,10 +218,9 @@ int main(int narg, char *sarg[]){
 
     std::thread ThProcessLeft(DoRanges, &stageLeft, sarg[3]);
     std::thread ThProcessRight(DoRanges, &stageRight, sarg[4]);
-
     std::thread ThWriter(DoWrite, &stageWrite, sarg[2], frameWidth, frameHeight);
-
     std::thread ThProcess(DoProcess, &stageRead, &stageWrite,  &stageLeft, &stageRight,  frameWidth, frameHeight);
+
     time_t tsBegin=clock();
 
     while(1)  {

@@ -165,8 +165,6 @@ if(CMAKE_COMPILER_IS_GNUCC OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -ffp-contract=fast -mavx -mavx2 -msse3 -msse4.1 -msse4.2 -msse4a")
 endif()
 
-find_package(Boost REQUIRED COMPONENTS program_options)
-
 if(OpenCV_FOUND)
   if(ENABLE_CUDA AND NOT OpenCV_CUDA_VERSION)
     set(BUILD_USELIB_TRACK "FALSE" CACHE BOOL "Build uselib_track" FORCE)
