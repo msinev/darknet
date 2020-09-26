@@ -294,7 +294,7 @@ static bool IsFile(boost::filesystem::path &path, std::string spath) {
 static bool IsDir(boost::filesystem::path &path, std::string spath) {
 
     if(!boost::filesystem::exists(spath) || !boost::filesystem::is_directory(spath)) {
-        std::cerr << spath << " not a file" << std::endl;
+        std::cerr << spath << " not a directory" << std::endl;
         return false;
     }
     path=boost::filesystem::path(spath);
@@ -310,7 +310,7 @@ int main(int narg, char *sarg[]) {
     //
     namespace po = boost::program_options;
 
-    std::string cfg_path, backup_path, weight_path, in_data_path,  out_data_path, class_map_path;
+    std::string cfg_path, backup_path, weight_path, in_data_path,  out_data_path;
     float thresh=40.0;
     long max_loop=100000;
     po::options_description desc("options");
@@ -326,7 +326,7 @@ int main(int narg, char *sarg[]) {
                 ("backup,b", po::value<std::string>(&backup_path), "Backup dir path")
                 ("netcfg,c", po::value<std::string>(&cfg_path), "Config file path")
                 ("weight,w", po::value<std::string>(&weight_path), "Weight file(s) path")
-                ("input,i", po::value<std::string>(&class_map_path), "Input data")
+                ("input,i", po::value<std::string>(&in_data_path), "Input data")
                 ("threshold,t", po::value<float>(&thresh),  "Threshold to stop testing 0-100%")
                 ("expected,x", po::value<std::string>(&out_data_path), "Expected data file")
                 ("maxloop,m", po::value<long>(&max_loop), "Data output file");
@@ -347,7 +347,7 @@ int main(int narg, char *sarg[]) {
         po::store(parsed, vm);
         po::notify(vm);
 
-        if (cfg_path.empty()      || weight_path.empty()    ||
+        if (cfg_path.empty()      || // weight_path.empty()    ||
             in_data_path.empty() ||  out_data_path.empty() ||
             backup_path.empty() /*|| class_map_path.empty()*/ || vm.count("help")) {
             std::cout << "Cmd [options] cfg in exp backup [thresh] [weight]\n" << desc << std::endl;
@@ -362,23 +362,13 @@ int main(int narg, char *sarg[]) {
     }
 
 
-    if(!boost::filesystem::exists(backup_path) || !boost::filesystem::is_directory(backup_path)) {
-        std::cerr << backup_path << "not a directrory" << std::endl;
-        return 2;
-        }
-
-    if(!boost::filesystem::exists(cfg_path) || !boost::filesystem::is_directory(cfg_path)) {
-        std::cerr << cfg_path << "not a file" << std::endl;
-        return 2;
-    }
-
     boost::filesystem::path  backupDir, weightFile, networkCfg, inputFile, outputFile;
 
     if(  !IsDir(backupDir,  backup_path)  |
          !IsFile( weightFile, weight_path) |
          !IsFile( networkCfg, cfg_path) |
          !IsFile( inputFile, in_data_path) |
-         !IsFile( outputFile, in_data_path)
+         !IsFile( outputFile, out_data_path)
         ) {
             return 1;
 
