@@ -134,6 +134,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     list *options = read_data_cfg((char*)cfgfile.c_str());
 
     int N = 0;
+    return;
 /*
     BOOST_FOREACH( const std::vector<boost::filesystem::path> &namel, imgs )
     {
