@@ -24,7 +24,7 @@ struct networkInput {
     int size;
     int batch;
 
-    networkInput(int s): batch(1), size(s) { }
+    networkInput(int s): size(s), batch(1) { }
 
     virtual int getWidth() const { return  size; }
     virtual const int getHeight() const { return  batch; }
@@ -38,7 +38,7 @@ class dirRandomLabelDataBuilder: public dataBuilder {
 public:
     dirRandomLabelDataBuilder(const  std::vector<std::vector<boost::filesystem::path>> &im,
                               const  std::vector<std::string> &l, const networkInput &p, int batchSize=32):
-            imgs(im), labels(l), batch(batchSize), netParam(p) { }
+            imgs(im), labels(l),  netParam(p), batch(batchSize) { }
 
 
     void setBatch(int b) {
@@ -75,7 +75,7 @@ public:
             targetVector[iLabel]=1.0;
         }
 
-        int i;
+
 
         return d;
 /*
@@ -98,35 +98,36 @@ public:
 };
 
 
-void trainme(const std::vector<std::string> &labels, const std::vector<std::vector<boost::filesystem::path>> &imgs,
+void trainme(const boost::filesystem::path in, const boost::filesystem::path out,
              boost::filesystem::path cfgfile, boost::filesystem::path weightfile,
              boost::filesystem::path backup_directory,
-             int *gpus, int ngpus, int clear, int classes=2)  {
+             std::vector<int> &gpus, int classes=2)  {
 
-    int i;
+
     float avg_loss = -1;
 
     std::cout << "Loading network from "<< cfgfile << std::endl;
 
     char *base = basecfg((char*)cfgfile.c_str());
     printf("%s\n", base);
-    printf("%d\n", ngpus);
-    network **nets = (network **)calloc(ngpus, sizeof(network*));
+    printf("%lu\n", gpus.size());
+    network **nets = (network **)calloc(gpus.size(), sizeof(network*));
 
     srand(time(0));
     int seed = rand();
-    for(i = 0; i < ngpus; ++i){
+    bool clear=weightfile.empty();
+    for(uint i = 0; i < gpus.size(); ++i){
         srand(seed);
 #ifdef GPU
         cuda_set_device(gpus[i]);
 #endif
         nets[i] = load_network((char*)cfgfile.c_str(), (char*)(clear?"":weightfile.c_str()), clear);
-        nets[i]->learning_rate *= ngpus;
+        nets[i]->learning_rate *= gpus.size();
     }
     srand(time(0));
     network *net = nets[0];
 
-    int imgBlock = net->batch * net->subdivisions * ngpus;
+    int imgBlock = net->batch * net->subdivisions * gpus.size();
     std::cout << "Block size: "<< imgBlock << std::endl;
 
     printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
@@ -247,7 +248,7 @@ void trainme(const std::vector<std::string> &labels, const std::vector<std::vect
     const int timescale=60*15;
 
 
-    assert(ngpus == 1);
+    assert(gpus.size() == 1);  // to simplify for now
     std::cerr << "Train network single GPU (repeat max "<< scale <<" times max "<<timescale<<"s)" << std::endl;
     for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
        loss = train_network(*net, train);
@@ -385,7 +386,7 @@ void trainme(boost::filesystem::path cfgfile, boost::filesystem::path weightfile
 
  */
 
-  //  trainme(names, imgs, networkCfg, weightFile, backupDir, &gpus[0], gpus.size(), clear);
+    trainme(inputFile, outputFile,  networkCfg, weightFile, backupDir, gpus);
 //    checkDirPath(file, "data.test", path);
     //std::cout << "Hello world\n" << "from " << root << std::endl;
     return 0;
