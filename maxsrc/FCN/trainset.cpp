@@ -12,6 +12,8 @@
 #include "darknet.h"
 #include "matrix.h"
 #include "customdata.hpp"
+//#include "jsonset.h"
+
 extern "C" {
 #include "utils.h"
 }
@@ -25,6 +27,8 @@ struct networkInput {
     int batch;
 
     networkInput(int s): size(s), batch(1) { }
+
+
 
     virtual int getWidth() const { return  size; }
     virtual const int getHeight() const { return  batch; }
@@ -108,14 +112,18 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
     std::cout << "Loading network from "<< cfgfile << std::endl;
 
-    char *base = basecfg((char*)cfgfile.c_str());
+    char *base = basecfg( (char*)cfgfile.c_str() );
+
     printf("%s\n", base);
     printf("%lu\n", gpus.size());
     network **nets = (network **)calloc(gpus.size(), sizeof(network*));
 
-    srand(time(0));
+    srand(time(0) );
+
+    //
     int seed = rand();
     bool clear=weightfile.empty();
+
     for(uint i = 0; i < gpus.size(); ++i){
         srand(seed);
 #ifdef GPU
@@ -134,7 +142,6 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     list *options = read_data_cfg((char*)cfgfile.c_str());
 
     int N = 0;
-    return;
 /*
     BOOST_FOREACH( const std::vector<boost::filesystem::path> &namel, imgs )
     {
@@ -152,8 +159,8 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     //
     // if (tree) net->hierarchy = read_tree(tree);
 
-    //int classes = option_find_int(options, "classes", 2);
-
+    classes = option_find_int(options, "classes", classes);
+    std::cerr << "classes: " << classes << std::endl;
     //char **labels = 0;
     //labels = get_labels(label_list);
     //list *plist = get_paths(train_list);
@@ -187,8 +194,12 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     args.type = CLASSIFICATION_DATA;
      // load_data_augment(a.paths, a.n, a.m, a.labels, a.classes, a.hierarchy, a.min, a.max, a.size, a.angle, a.aspect, a.hue, a.saturation, a.exposure, a.center);
 */
+    std::ifstream indata(in.string());
+    std::ifstream outdata(out.string());
+
     data train;
     data buffer;
+
     //std::vector<std::vector<boost::filesystem::path>> &im,
     //std::vector<std::string> &l, networkImageInput &p,
     int epoch = (*net->seen)/N;
@@ -198,8 +209,9 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 //    dirRandomLabelDataBuilder dataBuilder(imgs, labels, netp, 2048 /*?some?*/);
 
     std::cout << "Building data batch" << std::endl;
+    //train=dataBuilder.buildData();
 /*
-    train=dataBuilder.buildData();
+
 
     std::cout << "Data batch loaded" << std::endl;
 
@@ -236,7 +248,9 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
           pthread_join(load_thread, 0);
     */
-          train = buffer;
+
+    train = buffer;
+
     //      load_thread = load_data(args);
 
 
@@ -367,7 +381,7 @@ int main(int narg, char *sarg[]) {
     boost::filesystem::path  backupDir, weightFile, networkCfg, inputFile, outputFile;
 
     if(  !IsDir(backupDir,  backup_path)  |
-         !IsFile( weightFile, weight_path) |
+         (!weightFile.empty() && !IsFile( weightFile, weight_path)) |
          !IsFile( networkCfg, cfg_path) |
          !IsFile( inputFile, in_data_path) |
          !IsFile( outputFile, out_data_path)
@@ -379,7 +393,6 @@ int main(int narg, char *sarg[]) {
 
 //    std::vector<std::vector<boost::filesystem::path>> imgs(names.size());
 
-    std::cout << "-------------- 2 ----------------" << std::endl;
 /*
 void trainme(boost::filesystem::path cfgfile, boost::filesystem::path weightfile,
                boost::filesystem::path backup_directory,

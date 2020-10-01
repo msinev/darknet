@@ -5,6 +5,8 @@
 #ifndef DARKNET_JSONSET_H
 #define DARKNET_JSONSET_H
 #include <cstring>
+#include <vector>
+#include <iostream>
 #include <algorithm>
 
 // Externally rolling dataset
@@ -44,6 +46,6 @@ struct rollingdata {
 
 };
 
-
+std::vector<float> readjsonarray(std::istream s);
 
 #endif //DARKNET_JSONSET_H

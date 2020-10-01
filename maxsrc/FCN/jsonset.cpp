@@ -22,3 +22,38 @@ void rollingdata::Print() {
 
     }
 }
+
+std::vector<float> readjsonarray(std::istream &s, int nx) {
+    std::string v;
+    std::vector<float> vect(nx);
+    bool ok=true;
+    bool done=false;
+
+    while(ok)  {
+        int c=s.peek();
+        s.ignore() ;
+        if (c=='[') break;
+        if(c!=' ' && c!='\n' && c!='\t') ok=false;
+    }
+    while(ok && !done) {
+        float f;
+        int rtc=(s >> f).good();
+        if(!rtc) {
+            ok=false;
+            break;
+          }
+        vect.push_back(f);
+        do {
+            int c=s.peek();
+            s.ignore() ;
+            if (c==']') {
+                done=true;
+                break;
+                }
+            if(c==',') break;
+            if(c!=' ' && c!='\n' && c!='\t') ok=false;
+        }  while(ok);
+
+        }
+    return vect;
+}
