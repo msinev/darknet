@@ -46,6 +46,6 @@ struct rollingdata {
 
 };
 
-std::vector<float> readjsonarray(std::istream s, int nx);
+std::vector<float> readjsonarray(std::istream &s, int nx);
 
 #endif //DARKNET_JSONSET_H

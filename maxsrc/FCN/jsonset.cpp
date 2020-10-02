@@ -35,6 +35,7 @@ std::vector<float> readjsonarray(std::istream &s, int nx) {
         if (c=='[') break;
         if(c!=' ' && c!='\n' && c!='\t') ok=false;
     }
+    int i=0;
     while(ok && !done) {
         float f;
         int rtc=(s >> f).good();
@@ -42,7 +43,12 @@ std::vector<float> readjsonarray(std::istream &s, int nx) {
             ok=false;
             break;
           }
-        vect.push_back(f);
+        if(nx<=0) {
+            vect.push_back(f);
+        } else {
+            vect[i++]=f;
+        }
+
         do {
             int c=s.peek();
             s.ignore() ;

@@ -196,10 +196,14 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 */
     std::ifstream indata(in.string());
     std::ifstream outdata(out.string());
+    //return;
 
     data train;
     data buffer;
-
+    auto vin=readjsonarray(indata, 0);
+    auto vout=readjsonarray(outdata, 20);
+//    std::cout << vin.size() << ":" << vout.size() << std::endl;
+    train.
     //std::vector<std::vector<boost::filesystem::path>> &im,
     //std::vector<std::string> &l, networkImageInput &p,
     int epoch = (*net->seen)/N;
