@@ -141,7 +141,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     printf("Learning Rate: %g, Momentum: %g, Decay: %g\n", net->learning_rate, net->momentum, net->decay);
     list *options = read_data_cfg((char*)cfgfile.c_str());
 
-    int N = 0;
+    //int N = 0;
 /*
     BOOST_FOREACH( const std::vector<boost::filesystem::path> &namel, imgs )
     {
@@ -199,14 +199,11 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     //return;
 
     data train;
-    data buffer;
-    auto vin=readjsonarray(indata, 0);
-    auto vout=readjsonarray(outdata, 20);
+    //data buffer;
 //    std::cout << vin.size() << ":" << vout.size() << std::endl;
-    train.
     //std::vector<std::vector<boost::filesystem::path>> &im,
     //std::vector<std::string> &l, networkImageInput &p,
-    int epoch = (*net->seen)/N;
+    //int epoch = (*net->seen)/N;
 
     //networkSizeImageInput netp(net);
 
@@ -253,7 +250,9 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
           pthread_join(load_thread, 0);
     */
 
-    train = buffer;
+    //train = buffer;
+
+
 
     //      load_thread = load_data(args);
 
@@ -265,25 +264,38 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     float loss = 0;
     const int scale=1000;
     const int timescale=60*15;
-
+    int N=0;
 
     assert(gpus.size() == 1);  // to simplify for now
     std::cerr << "Train network single GPU (repeat max "<< scale <<" times max "<<timescale<<"s)" << std::endl;
     for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
-       loss = train_network(*net, train);
+        N++;
+        auto vin=readjsonarray(indata, 0);
+        auto vout=readjsonarray(outdata, 0);
+        float *valsIns=vin.data();
+        float *valsOuts=vout.data();
+        train.X.cols=vin.size();
+        train.X.rows=1;
+        train.X.vals=&valsIns;
+        train.y.cols=vout.size();
+        train.y.rows=1;
+        train.y.vals=&valsOuts;
+
+        loss = train_network(*net, train);
        std::cout << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
        }
     
     if(avg_loss == -1) avg_loss = loss;
     avg_loss = avg_loss*.9 + loss*.1;
     printf("%ld, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-time, *net->seen);
-    free_data(train);
+   // free_data(train);
+/*
     if(*net->seen/N > epoch) {
         epoch = *net->seen/N;
         char buff[256];
         sprintf(buff, "%s/%s_%d.weights",backup_directory.c_str(),base, epoch);
         save_weights(*net, buff);
-    }
+    }*/
     if(get_current_batch(*net)%1000 == 0){
         char buff[256];
         sprintf(buff, "%s/%s.backup",backup_directory.c_str(),base);
@@ -301,6 +313,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     //free_list(plist);
     free(base);
 }
+
 static bool IsFile(boost::filesystem::path &path, std::string spath) {
 
     if(!boost::filesystem::exists(spath) || !boost::filesystem::is_regular_file(spath)) {
