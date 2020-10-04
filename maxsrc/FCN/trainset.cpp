@@ -282,7 +282,8 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         train.y.vals=&valsOuts;
 
         loss = train_network(*net, train);
-       std::cout << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
+       std::cout << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
+       if(loss <0.00001) break;
        }
     
     if(avg_loss == -1) avg_loss = loss;

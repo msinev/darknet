@@ -395,7 +395,9 @@ float train_network(network net, data d)
 
 float train_network_waitkey(network net, data d, int wait_key)
 {
+    // Training by number of rows in batch up to number of rows
     assert(d.X.rows % net.batch == 0);
+    assert(d.y.rows == d.X.rows);
     int batch = net.batch;
     int n = d.X.rows / batch;
     float* X = (float*)xcalloc(batch * d.X.cols, sizeof(float));
@@ -403,7 +405,7 @@ float train_network_waitkey(network net, data d, int wait_key)
 
     int i;
     float sum = 0;
-    for(i = 0; i < n; ++i){
+    for(i = 0; i < n; ++i){  // make forward passes accumulate error in layers
         get_next_batch(d, batch, i*batch, X, y);
         net.current_subdivision = i;
         float err = train_network_datum(net, X, y);
@@ -411,6 +413,7 @@ float train_network_waitkey(network net, data d, int wait_key)
         if(wait_key) wait_key_cv(5);
     }
     (*net.cur_iteration) += 1;
+    // distribute errors to layers
 #ifdef GPU
     update_network_gpu(net);
 #else   // GPU

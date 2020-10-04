@@ -1920,7 +1920,7 @@ void get_next_batch(data d, int n, int offset, float *X, float *y)
     int j;
     for(j = 0; j < n; ++j){
         int index = offset + j;
-        memcpy(X+j*d.X.cols, d.X.vals[index], d.X.cols*sizeof(float));
+        memcpy(X+j*d.X.cols, d.X.vals[index], d.X.cols*sizeof(float));  // copy a row to X data
         memcpy(y+j*d.y.cols, d.y.vals[index], d.y.cols*sizeof(float));
     }
 }
