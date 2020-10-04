@@ -80,15 +80,15 @@ struct imgParams {
     float exposure;
     int center;
 };
-
+/*
 struct verticalVector: matrix  {
     verticalVector(int Xn) { // Vector
-        rows = Xn;
-        vals = (float **)calloc(rows, sizeof(float *));
-        cols = 0;
+        cols = Xn;
+        vals = (float **)calloc(cols, sizeof(float *));
+        rows = 1;
     }
 };
-
+*/
 
 bool checkFilePath(boost::filesystem::path& abs, boost::filesystem::path name,  std::list<boost::filesystem::path> &path) {
 //

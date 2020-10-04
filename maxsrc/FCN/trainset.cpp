@@ -25,15 +25,12 @@ extern "C" {
 struct networkInput {
     int size;
     int batch;
-
     networkInput(int s): size(s), batch(1) { }
 
-
-
     virtual int getWidth() const { return  size; }
-    virtual const int getHeight() const { return  batch; }
+    virtual const int getBatch() const { return  batch; }
 };
-
+/*
 class dirRandomLabelDataBuilder: public dataBuilder {
     const std::vector<std::vector<boost::filesystem::path>> imgs;
     const std::vector<std::string> labels;
@@ -57,7 +54,7 @@ public:
 
         d.shallow = 0;
         d.w=netParam.getWidth();
-        d.h=netParam.getHeight();
+        d.h=netParam.getBatch();
         d.X=verticalVector(batch);
         d.y=make_matrix(batch, nLabels);
 
@@ -96,11 +93,11 @@ public:
         data d={0, 0};
 
         return d;
-*/
+/   * /
     }
 
 };
-
+*/
 
 void trainme(const boost::filesystem::path in, const boost::filesystem::path out,
              boost::filesystem::path cfgfile, boost::filesystem::path weightfile,
@@ -262,7 +259,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     time = what_time_is_it_now();
 
     float loss = 0;
-    const int scale=1000;
+    const int scale=100000;
     const int timescale=60*15;
     int N=0;
 
@@ -274,6 +271,10 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         auto vout=readjsonarray(outdata, 0);
         float *valsIns=vin.data();
         float *valsOuts=vout.data();
+        if(vout.size()!=20) {
+            std::cout << " -- Data end --\n Abort "<< std::endl;
+            break;
+            }
         train.X.cols=vin.size();
         train.X.rows=1;
         train.X.vals=&valsIns;
@@ -283,7 +284,10 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
         loss = train_network(*net, train);
        std::cout << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
-       if(loss <0.00001) break;
+       if(loss <0.00001) {
+           std::cout << " Loss minimized exiting "<< std::endl;
+           break;
+           }
        }
     
     if(avg_loss == -1) avg_loss = loss;
@@ -308,8 +312,9 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
     //sprintf(buff, "%s/%s.weights", backup_directory.c_str(), base);
 //    pthread_join(load_thread, 0);
-    std::cout << "Saving file: " << weightfile << std::endl;
-    save_weights(*net, (char *)weightfile.c_str());
+    auto newpath=backup_directory/(weightfile.filename().string()+".new");
+    std::cout << "Saving file: " << newpath << std::endl;
+    save_weights(*net, (char*)(newpath).c_str());
     free_network(*net);
     //free_list(plist);
     free(base);
