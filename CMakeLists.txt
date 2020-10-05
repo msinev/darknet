@@ -330,6 +330,16 @@ target_include_directories(todata PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(todata PUBLIC ${Boost_INCLUDE_DIR})
 target_link_libraries(todata PUBLIC ${Boost_LIBRARIES})
 
+#if(OpenCV_FOUND)
+add_executable(data2data ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/datatodata.cpp ${CMAKE_CURRENT_LIST_DIR}/maxsrc/tchannel.hpp maxsrc/kwset.cpp)
+target_link_libraries(data2data PRIVATE ${OpenCV_LINKED_COMPONENTS})
+target_include_directories(data2data PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_include_directories(data2data PUBLIC ${CMAKE_CURRENT_LIST_DIR}/src)
+target_include_directories(data2data PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
+target_include_directories(data2data PUBLIC ${Boost_INCLUDE_DIR})
+target_link_libraries(data2data PUBLIC ${Boost_LIBRARIES})
+
+
 add_executable(shadeoftime ${CMAKE_CURRENT_LIST_DIR}/maxsrc/shadeoftime.cpp)
 target_link_libraries(shadeoftime PRIVATE ${OpenCV_LINKED_COMPONENTS})
 target_link_libraries(shadeoftime PRIVATE pthread)
