@@ -75,15 +75,17 @@ const char tagTill[]="EndFrame";
 void DoRanges(chanData *out, std::string path) {
     ifstream in(path);
 
-    int64_t n=0;
-    int w;
+    int64_t n=0, nws=0;
+    int w, wp, ws;
 
     int64_t MaxRange=0, MinRange;
 
     do {
+        wp=0;
         n++;
         if(n<MaxRange) {
              w=(n>MinRange)?1:0;
+             wp=(n>(MinRange-40))?2:0;
         } else if(in) {
             w=0;
             std::string line;
@@ -124,9 +126,14 @@ void DoRanges(chanData *out, std::string path) {
         eol:;
 
         //    std::cout << "-- "  << w << std::endl;
-
+        if(w) {
+            nws=10;
+        } else if(nws) {
+            nws--;
+        }
+        ws=nws?4:0;
     }
-    while (out->send(w));
+    while (out->send(w|wp|ws));
 
     std::cout << "!! "  << n << std::endl;
 }
@@ -134,10 +141,10 @@ void DoRanges(chanData *out, std::string path) {
 
 void DoProcess(chanStage *in, chanStage *out, chanData *left, int frameWidth, int frameHeight) {
     Mat image;
-//    long n=0;
+    long n=0;
 
     while (in->read(image)) {
-
+        n++;
 
         Mat grayImage;
         cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
@@ -158,7 +165,7 @@ void DoProcess(chanStage *in, chanStage *out, chanData *left, int frameWidth, in
                     auto &pp=pixel[j];
                     bool g;
 
-                   g=(fLeft==0);
+                   g=(fLeft&1);
 
                     if(g) {
                         pp[2]=c;
@@ -169,8 +176,9 @@ void DoProcess(chanStage *in, chanStage *out, chanData *left, int frameWidth, in
                     }
                 }
 
-        //if(fLeft)
-            out->send( image.clone() );
+            if(fLeft)
+               out->send( image.clone() );
+
         }
     std::cout << "Closing output" << std::endl;
     out->close();
