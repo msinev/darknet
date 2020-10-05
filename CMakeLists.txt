@@ -350,6 +350,10 @@ target_link_libraries(dualshade PRIVATE ${OpenCV_LINKED_COMPONENTS})
 target_link_libraries(dualshade PRIVATE pthread)
 target_include_directories(dualshade PUBLIC ${OpenCV_INCLUDE_DIRS})
 
+add_executable(singleshade ${CMAKE_CURRENT_LIST_DIR}/maxsrc/singleshade.cpp)
+target_link_libraries(singleshade PRIVATE ${OpenCV_LINKED_COMPONENTS})
+target_link_libraries(singleshade PRIVATE pthread)
+target_include_directories(singleshade PUBLIC ${OpenCV_INCLUDE_DIRS})
 
 
 add_executable(readvideo ${CMAKE_CURRENT_LIST_DIR}/maxsrc/readvideo.cpp)

@@ -17,7 +17,7 @@
 #include <sys/time.h>
 #include <iostream>
 #include "http_stream.h"
-#include "image_opencv.h"
+
 #include "../kwset.h"
 //
 #include <rapidjson/rapidjson.h>
@@ -43,8 +43,6 @@ static network net;
 static image in_s ;
 static image det_s;
 
-static cap_cv *cap;
-static float fps = 0;
 static float demo_thresh = 0; // passed to thresholds
 //static int demo_ext_output = 0;
 static long long int frame_id = 0;
@@ -54,12 +52,9 @@ static long long int frame_id = 0;
 
 static float* predictions[NFRAMES];
 static int demo_index = 0;
-static mat_cv* cv_images[NFRAMES];
+
 static float *avg;
 
-mat_cv* in_img;
-mat_cv* det_img;
-mat_cv* show_img;
 
 static volatile int flag_exit;
 static int letter_box = 0;
@@ -72,99 +67,9 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
                 const char *filename, const char **names, int classes,
                 const char *data_out, const char *out_filename);
 
-void *fetch_in_thread(void *ptr)
-{
-    while (!custom_atomic_load_int(&flag_exit)) {
-        while (!custom_atomic_load_int(&run_fetch_in_thread)) {
-            if (custom_atomic_load_int(&flag_exit)) return 0;
-            this_thread_yield();
-        }
-        int dont_close_stream = 0;    // set 1 if your IP-camera periodically turns off and turns on video-stream
-        if (letter_box)
-            in_s = get_image_from_stream_letterbox(cap, net.w, net.h, net.c, &in_img, dont_close_stream);
-        else
-            in_s = get_image_from_stream_resize(cap, net.w, net.h, net.c, &in_img, dont_close_stream);
-        if (!in_s.data) {
-            printf("Stream closed.\n");
-            custom_atomic_store_int(&flag_exit, 1);
-            custom_atomic_store_int(&run_fetch_in_thread, 0);
-            //exit(EXIT_FAILURE);
-            return 0;
-        }
-        //in_s = resize_image(in, net.w, net.h);
 
-        custom_atomic_store_int(&run_fetch_in_thread, 0);
-    }
-    return 0;
-}
 
-void *fetch_in_thread_sync(void *ptr)
-{
-    custom_atomic_store_int(&run_fetch_in_thread, 1);
-    while (custom_atomic_load_int(&run_fetch_in_thread)) this_thread_sleep_for(thread_wait_ms);
-    return 0;
-}
 
-void *detect_in_thread(void *ptr)
-{
-    while (!custom_atomic_load_int(&flag_exit)) {
-        while (!custom_atomic_load_int(&run_detect_in_thread)) {
-            if (custom_atomic_load_int(&flag_exit)) return 0;
-            this_thread_yield();
-        }
-
-        layer l = net.layers[net.n - 1];
-        float *X = det_s.data;
-        float *prediction = network_predict(net, X);
-
-        memcpy(predictions[demo_index], prediction, l.outputs * sizeof(float));
-        mean_arrays(predictions, NFRAMES, l.outputs, avg);
-        l.output = avg;
-
-        cv_images[demo_index] = det_img;
-        det_img = cv_images[(demo_index + NFRAMES / 2 + 1) % NFRAMES];
-        demo_index = (demo_index + 1) % NFRAMES;
-
-        /*
-         * // box.h
-typedef struct detection{
-    box bbox;
-    int classes;
-    float *prob;
-    float *mask;
-    float objectness;
-    int sort_class;
-    float *uc; // Gaussian_YOLOv3 - tx,ty,tw,th uncertainty
-    int points; // bit-0 - center, bit-1 - top-left-corner, bit-2 - bottom-right-corner
-} detection;
-
-         */
-        if (letter_box)
-            dets = get_network_boxes(&net, get_width_mat(in_img), get_height_mat(in_img), demo_thresh, demo_thresh, 0, 1, &nboxes, 1); // letter box
-        else
-            dets = get_network_boxes(&net, net.w, net.h, demo_thresh, demo_thresh, 0, 1, &nboxes, 0); // resized
-
-        custom_atomic_store_int(&run_detect_in_thread, 0);
-    }
-
-    return 0;
-}
-
-void *detect_in_thread_sync(void *ptr)
-{
-    custom_atomic_store_int(&run_detect_in_thread, 1);
-    while (custom_atomic_load_int(&run_detect_in_thread)) this_thread_sleep_for(thread_wait_ms);
-    return 0;
-}
-
-double get_wall_time()
-{
-    struct timeval walltime;
-    if (gettimeofday(&walltime, NULL)) {
-        return 0;
-    }
-    return (double)walltime.tv_sec + (double)walltime.tv_usec * .000001;
-}
 
 int main(int narg, char **sarg) {
     //
@@ -175,7 +80,8 @@ int main(int narg, char **sarg) {
     scantodata( const char *filename, char **names, int classes,
     int frame_skip, char *prefix,  int dont_show, int ext_output,
     ); */
-    std::string cfg_path, weight_path, in_data_path, out_video_path,  out_data_path, out_width;
+    std::string cfg_path, weight_path, in_data_path, out_video_path,  out_data_path;
+    int out_width;
 
     classSet classes;
     po::options_description desc("options");
@@ -193,8 +99,8 @@ int main(int narg, char **sarg) {
                 ("help,h", "Show help")
                 ("cfg,c", po::value<std::string>(&cfg_path), "Config file path")
                 ("weight,w", po::value<std::string>(&weight_path), "Weight file path")
-                ("map,m", po::value<std::string>(&class_map_path), "Class map")
-                ("threshold,t", po::value<float>(&thresh),  "Threshold probability in percents 0-100")
+                //("map,m", po::value<std::string>(&class_map_path), "Class map")
+                ("outwidth,u", po::value<int>(&out_width),  "Threshold probability in percents 0-100")
                 ("indata,i", po::value<std::string>(&in_data_path), "Video input file")
                 ("outdata,j", po::value<std::string>(&out_data_path), "Data output file");
 
@@ -211,13 +117,11 @@ int main(int narg, char **sarg) {
         po::notify(vm);
 
         if (cfg_path.empty()      || weight_path.empty()    ||
-            in_video_path.empty() || //out_video_path.empty() ||
-            out_data_path.empty() || class_map_path.empty() || vm.count("help")) {
+            in_data_path.empty() || //out_video_path.empty() ||
+            out_data_path.empty() || vm.count("help")) {
             std::cout << "Cmd [options]\n" << desc << std::endl;
             return 1;
         }
-
-        classes.readSet( class_map_path );
 
     } catch (std::exception &ex) {
         std::cout << ex.what() << std::endl;
@@ -230,10 +134,11 @@ int main(int narg, char **sarg) {
                 const char *filename, const char **names, int classes,
                 const char *data_out, const char *out_filename)  {
  */
+/*
     scantodata( cfg_path.c_str(), weight_path.c_str(), thresh/100.,
-                     in_video_path.c_str() , classes.names , classes.classes,
+                     in_data_path.c_str() , classes.names , classes.classes,
                      out_data_path.c_str(), out_video_path.c_str());
-
+*/
     classes.freeBuf();
 
     return 0;
@@ -520,7 +425,7 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
     }
     //int benchmark,
 //    letter_box = letter_box_in;
-    in_img = det_img = show_img = NULL;
+
     //skip = frame_skip;
     //image **alphabet = load_alphabet();
     //demo_names = names;
@@ -541,17 +446,17 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
 
     if(filename){
         printf("video file: %s\n", filename);
-        cap = get_capture_video_stream(filename);
+//        cap = get_capture_video_stream(filename);
     } /*
     else{
         printf("Webcam index: %d\n", cam_index);
         cap = get_capture_webcam(cam_index);
     }  */
-
+/*
     if (!cap) {
         error("Couldn't connect to webcam.\n");
     }
-
+*/
     layer l = net.layers[net.n-1];
     int j;
 
@@ -568,23 +473,23 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
 
     custom_thread_t fetch_thread = NULL;
     custom_thread_t detect_thread = NULL;
-    if (custom_create_thread(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
-    if (custom_create_thread(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
+    //if (custom_create_thread(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
+    //if (custom_create_thread(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
 
-    fetch_in_thread_sync(0); //fetch_in_thread(0);
-    det_img = in_img;
+    //fetch_in_thread_sync(0); //fetch_in_thread(0);
+
     det_s = in_s;
 
-    fetch_in_thread_sync(0); //fetch_in_thread(0);
-    detect_in_thread_sync(0); //fetch_in_thread(0);
-    det_img = in_img;
+    //fetch_in_thread_sync(0); //fetch_in_thread(0);
+    //detect_in_thread_sync(0); //fetch_in_thread(0);
+
     det_s = in_s;
 
     for (j = 0; j < NFRAMES / 2; ++j) {
         free_detections(dets, nboxes);
-        fetch_in_thread_sync(0); //fetch_in_thread(0);
-        detect_in_thread_sync(0); //fetch_in_thread(0);
-        det_img = in_img;
+        //fetch_in_thread_sync(0); //fetch_in_thread(0);
+        //detect_in_thread_sync(0); //fetch_in_thread(0);
+
         det_s = in_s;
         }
 
@@ -597,22 +502,6 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
     }
 */
 
-    write_cv* output_video_writer = NULL;
-    if (out_filename && !flag_exit)
-    {
-        int src_fps = 25;
-        src_fps = get_stream_fps_cpp_cv(cap);
-        output_video_writer =
-                create_video_writer((char*)out_filename, 'H', '2', '6', '4', src_fps, get_width_mat(det_img), get_height_mat(det_img), 1);
-
-        //'H', '2', '6', '4'
-        //'D', 'I', 'V', 'X'
-        //'M', 'J', 'P', 'G'
-        //'M', 'P', '4', 'V'
-        //'M', 'P', '4', '2'
-        //'X', 'V', 'I', 'D'
-        //'W', 'M', 'V', '2'
-    }
 
 //    int send_http_post_once = 0;
 //    const double start_time_lim = get_time_point();
@@ -669,7 +558,7 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
 //            draw_detections_cv_v3(show_img, local_dets, local_nboxes, demo_thresh, names, demo_alphabet, classes, demo_ext_output);
             free_detections(local_dets, local_nboxes);
 
-            printf("\nFPS:%.1f \t AVG_FPS:%.1f\n", fps, avg_fps);
+            //printf("\nFPS:%.1f \t AVG_FPS:%.1f\n", fps, avg_fps);
 /*
             if(!prefix){
                 if (!dont_show) {
@@ -701,11 +590,6 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
                 send_mjpeg(show_img, port, timeout, jpeg_quality);
             }
 */
-            // save video file
-            if (output_video_writer && show_img) {
-                write_frame_cv(output_video_writer, show_img);
-                printf("\n cvWriteFrame \n");
-            }
 
             while (custom_atomic_load_int(&run_detect_in_thread)) {
                 if(avg_fps > 180) this_thread_yield();
@@ -728,12 +612,6 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
             if (flag_exit == 1) break;
 
             //if(delay == 0)
-            {
-                //if(!benchmark)
-                 release_mat(&show_img);
-                show_img = det_img;
-            }
-            det_img = in_img;
             det_s = in_s;
         }
       //  --delay;
@@ -745,7 +623,6 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
             //float curr = 1./(after - before);
             double after = get_time_point();    // more accurate time measurements
             float curr = 1000000. / (after - before);
-            fps = fps*0.9 + curr*0.1;
             before = after;
 
             float spent_time = (get_time_point() - start_time) / 1000000;
@@ -758,11 +635,6 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
             }
         }
     }
-    printf("input video stream closed. \n");
-    if (output_video_writer) {
-        release_video_writer(&output_video_writer);
-        printf("output_video_writer closed. \n");
-    }
 
     this_thread_sleep_for(thread_wait_ms);
 
@@ -774,11 +646,6 @@ void scantodata(const char *cfgfile, const char *weightfile, float thresh,
     free_detections(dets, nboxes);
 
     free(avg);
-    for (j = 0; j < NFRAMES; ++j) free(predictions[j]);
-    demo_index = (NFRAMES + demo_index - 1) % NFRAMES;
-    for (j = 0; j < NFRAMES; ++j) {
-        release_mat(&cv_images[j]);
-    }
 
     free_ptrs((void **)names, net.layers[net.n - 1].classes);
 
