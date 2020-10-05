@@ -71,6 +71,9 @@ std::string trim(const std::string& str, char c)
 
 const char tagFrom[]="BeginFrame";
 const char tagTill[]="EndFrame";
+const int leadingGap=80;
+const int trailingGap=30;
+const int darkGap=3;
 
 void DoRanges(chanData *out, std::string path) {
     ifstream in(path);
@@ -85,7 +88,7 @@ void DoRanges(chanData *out, std::string path) {
         n++;
         if(n<MaxRange) {
              w=(n>MinRange)?1:0;
-             wp=(n>(MinRange-40))?2:0;
+             wp=(n>(MinRange-leadingGap))?2:0;
         } else if(in) {
             w=0;
             std::string line;
@@ -127,11 +130,19 @@ void DoRanges(chanData *out, std::string path) {
 
         //    std::cout << "-- "  << w << std::endl;
         if(w) {
-            nws=10;
+            nws=trailingGap; // tail count
         } else if(nws) {
             nws--;
         }
-        ws=nws?4:0;
+        if (nws<trailingGap && nws>darkGap) {
+            ws=4;
+        } else if (nws<=darkGap && nws>0) {
+            ws=8; // fade in
+
+        } else {
+            ws=0;
+         }
+
     }
     while (out->send(w|wp|ws));
 
@@ -141,10 +152,10 @@ void DoRanges(chanData *out, std::string path) {
 
 void DoProcess(chanStage *in, chanStage *out, chanData *left, int frameWidth, int frameHeight) {
     Mat image;
-    long n=0;
+    //long n=0;
 
     while (in->read(image)) {
-        n++;
+        //n++;
 
         Mat grayImage;
         cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
@@ -163,14 +174,21 @@ void DoProcess(chanStage *in, chanStage *out, chanData *left, int frameWidth, in
                 for (int j = 0; j < frameWidth; ++j)       {
                     uchar c = *pixelG++;
                     auto &pp=pixel[j];
-                    bool g;
 
-                   g=(fLeft&1);
 
-                    if(g) {
-                        pp[2]=c;
-                        pp[1]=c;
-                        pp[0]=c;
+                   bool g=(fLeft&1);
+                   bool d=(fLeft==8);
+
+                    if(!g) {
+                        if(d) {
+                            pp[2] = c/10;
+                            pp[1] = c/10;
+                            pp[0] = c/10;
+                        } else {
+                            pp[2] = c;
+                            pp[1] = c;
+                            pp[0] = c;
+                        }
                         }
 
                     }
