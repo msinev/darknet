@@ -260,7 +260,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
     float loss = 0;
     const int scale=800000;
-    const int timescale=60*15;
+    const int timescale=60*2;
     int N=0;
 
     assert(gpus.size() == 1);  // to simplify for now
@@ -296,7 +296,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         do {
             loss = train_network(*net, train);
         } while(loss>20 && repeat-->0);
-       std::cout << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
+       if (N%100==0) std::cout << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
 /*       if(loss <0.00001) {
            std::cout << " Loss minimized exiting "<< std::endl;
            break;
