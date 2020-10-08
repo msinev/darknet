@@ -15,8 +15,13 @@ void writejsonarray(std::ostream &s, float  *p, int nx) {
     s << "]" << std::endl;
     }
 
-bool readjsonarrays(std::istream &s, std::vector<std::vector<float>> &vect){
+bool readjsonarrays(std::istream &data, std::vector<std::vector<float>> &vect){
 
+    std::vector<float> fv;
+    while(data && readjsonarray(data, fv) ){
+        vect.push_back(fv);
+    }
+    return true;
 }
 
 

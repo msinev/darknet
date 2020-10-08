@@ -259,20 +259,31 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     time = what_time_is_it_now();
 
     float loss = 0;
-    const int scale=100000;
+    const int scale=800000;
     const int timescale=60*15;
     int N=0;
 
     assert(gpus.size() == 1);  // to simplify for now
     std::cerr << "Train network single GPU (repeat max "<< scale <<" times max "<<timescale<<"s)" << std::endl;
+
+    std::vector<std::vector<float>> allIn, allOut;
+    readjsonarrays(indata, allIn);
+    readjsonarrays(outdata, allOut);
+
+    if(allIn.size()!=allOut.size() ) {
+        std::cout << "In not same as out " << allIn.size() << " " << allOut.size()<< std::endl;
+        return;
+    }
+
     for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
         N++;
-        auto vin=readjsonarray(indata, 0);
-        auto vout=readjsonarray(outdata, 0);
+        int vIn=rand_int(0, allIn.size()-2);
+        auto vin=allIn[vIn];
+        auto vout=allOut[vIn];
         float *valsIns=vin.data();
         float *valsOuts=vout.data();
         if(vout.size()!=20) {
-            std::cout << " -- Data end --\n Abort "<< std::endl;
+            std::cout << " -- Data wrong --\n Abort "<< std::endl;
             break;
             }
         train.X.cols=vin.size();
@@ -281,10 +292,10 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         train.y.cols=vout.size();
         train.y.rows=1;
         train.y.vals=&valsOuts;
-        int repeat =50;
+        int repeat =20        ;
         do {
             loss = train_network(*net, train);
-        } while(loss>50 && repeat-->0);
+        } while(loss>20 && repeat-->0);
        std::cout << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
 /*       if(loss <0.00001) {
            std::cout << " Loss minimized exiting "<< std::endl;
