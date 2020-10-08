@@ -79,7 +79,7 @@ public:
 
 
         return d;
-/*
+/ *
      // label paths (char **paths, int n, char **labels, int k, tree *hierarchy)
 
         if(m) paths = me_get_random_paths(paths, n, m);
@@ -281,13 +281,16 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         train.y.cols=vout.size();
         train.y.rows=1;
         train.y.vals=&valsOuts;
-
-        loss = train_network(*net, train);
+        int repeat =50;
+        do {
+            loss = train_network(*net, train);
+        } while(loss>50 && repeat-->0);
        std::cout << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
-       if(loss <0.00001) {
+/*       if(loss <0.00001) {
            std::cout << " Loss minimized exiting "<< std::endl;
            break;
            }
+           */
        }
     
     if(avg_loss == -1) avg_loss = loss;
