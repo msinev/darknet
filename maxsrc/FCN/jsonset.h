@@ -46,6 +46,12 @@ struct rollingdata {
 
 };
 
+void writejsonarray(std::ostream &s, float  *p, int nx);
+bool readjsonarray(std::istream &s, std::vector<float> &p);
 std::vector<float> readjsonarray(std::istream &s, int nx);
+
+inline void writejsonarray(std::ostream &s, std::vector<float> &p) {
+    writejsonarray(s, p.data(), p.size());
+  }
 
 #endif //DARKNET_JSONSET_H

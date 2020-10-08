@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <iostream>
 #include "http_stream.h"
+#include "jsonset.h"
 
 #include "../kwset.h"
 //
@@ -53,12 +54,12 @@ static network net;
 //static float* predictions[NFRAMES];
 //static int demo_index = 0;
 
-static float *avg;
+//static float *avg;
 
-void scantodata(const char *cfgfile, const char *weightfile, float thresh,
-                const char *filename, const char **names, int classes,
-                const char *data_out, const char *out_filename);
-
+void scantodata(const char *cfgfile,
+                const char *weightfile,
+                const char *in_filename,
+                const char *out_filename);
 
 int main(int narg, char **sarg) {
     //
@@ -69,10 +70,11 @@ int main(int narg, char **sarg) {
     scantodata( const char *filename, char **names, int classes,
     int frame_skip, char *prefix,  int dont_show, int ext_output,
     ); */
-    std::string cfg_path, weight_path, in_data_path, out_video_path,  out_data_path;
+    std::string cfg_path,      weight_path,
+                in_data_path,  out_data_path;
     int out_width;
 
-    classSet classes;
+    //classSet classes;
     po::options_description desc("options");
 
 //    std::string task_type;
@@ -94,10 +96,9 @@ int main(int narg, char **sarg) {
                 ("outdata,j", po::value<std::string>(&out_data_path), "Data output file");
 
         po::positional_options_description pos_desc;
-        pos_desc.add("invideo", 1);
         pos_desc.add("cfg", 1);
         pos_desc.add("weight", 1);
-        pos_desc.add("map", 1);
+        pos_desc.add("indata", 1);
         pos_desc.add("outdata", 1);
 
         po::parsed_options parsed = po::command_line_parser(narg, sarg).options(desc).positional(pos_desc).run();
@@ -117,18 +118,15 @@ int main(int narg, char **sarg) {
         return 2;
         }
 
-
-
-  void scantodata(const char *cfgfile, const char *weightfile, float thresh,
-                const char *filename, const char **names, int classes,
-                const char *data_out, const char *out_filename);
+    scantodata(cfg_path.c_str(),weight_path.c_str(),
+              in_data_path.c_str(), out_data_path.c_str() );
 
 /*
     scantodata( cfg_path.c_str(), weight_path.c_str(), thresh/100.,
                      in_data_path.c_str() , classes.names , classes.classes,
                      out_data_path.c_str(), out_video_path.c_str());
 */
-    classes.freeBuf();
+    //classes.freeBuf();
 
     return 0;
 }
@@ -431,7 +429,7 @@ void scantodata(const char *cfgfile, const char *weightfile,
         }
 
    // net.benchmark_layers = benchmark_layers;
-    fuse_conv_batchnorm(net);       // Optimisation only ??
+    //fuse_conv_batchnorm(net);       // Optimisation only ??
     calculate_binary_weights(net);  // Optimisation only ??
 
     std::ifstream datain(in_filename);
@@ -466,7 +464,7 @@ void scantodata(const char *cfgfile, const char *weightfile,
     layer l = net.layers[net.n-1];
     int j;
 
-    avg = (float *) calloc(l.outputs, sizeof(float));
+//    avg = (float *) calloc(l.outputs, sizeof(float));
 
     //for(j = 0; j < l.outputs; ++j) predictions[j] = (float *) calloc(l.outputs, sizeof(float));
 /*
@@ -500,105 +498,29 @@ void scantodata(const char *cfgfile, const char *weightfile,
     double start_time = get_time_point();
     float avg_fps = 0;
     int frame_counter = 0;
+    std::vector<float> fv;
 
-    while(1 /*  && count<2400 */ ){
+    std::cout << "Inputs " <<  net.inputs   << std::endl;
+    std::cout << "Outputs " <<  net.outputs << std::endl;
+
+    while(datain && readjsonarray(datain, fv) ){
         ++count;
-        {
 
+       // writejsonarray(std::cout, fv);
 
-            //printf("\033[2J");
-            //printf("\033[1;1H");
-            //printf("\nFPS:%.1f\n", fps);
-            printf("Objects:\n\n");
-            load data
-            float *X = det_s.data;
-            float *prediction = network_predict(net, X);
-
-            save data
-//            ++frame_id;
-
-          //  data  << send_buf << "\n\n";
-/*
-            if (demo_json_port > 0) {
-                int timeout = 400000;
-                send_json(local_dets, local_nboxes, l.classes, demo_names, frame_id, demo_json_port, timeout);
-            }
-*/
-            //char *http_post_server = "webhook.site/898bbd9b-0ddd-49cf-b81d-1f56be98d870";
-/*
-            if (http_post_host && !send_http_post_once) {
-                int timeout = 3;            // 3 seconds
-                int http_post_port = 80;    // 443 https, 80 http
-                if (send_http_post_request(http_post_host, http_post_port, filename,
-                                           local_dets, nboxes, classes, names, frame_id, ext_output, timeout))
-                    {
-                    if (time_limit_sec > 0) send_http_post_once = 1;
-                    }
-            }
-*/
-//            if (!benchmark)
-//            draw_detections_cv_v3(show_img, local_dets, local_nboxes, demo_thresh, names, demo_alphabet, classes, demo_ext_output);
-
-
-            //printf("\nFPS:%.1f \t AVG_FPS:%.1f\n", fps, avg_fps);
-/*
-            if(!prefix){
-                if (!dont_show) {
-                    show_image_mat(show_img, "Demo");
-                    int c = wait_key_cv(1);
-                    if (c == 10) {
-                        if (frame_skip == 0) frame_skip = 60;
-                        else if (frame_skip == 4) frame_skip = 0;
-                        else if (frame_skip == 60) frame_skip = 4;
-                        else frame_skip = 0;
-                    }
-                    else if (c == 27 || c == 1048603) // ESC - exit (OpenCV 2.x / 3.x)
-                    {
-                        flag_exit = 1;
-                    }
-                }
-            }else{
-                char buff[256];
-                sprintf(buff, "%s_%08d.jpg", prefix, count);
-                if(show_img) save_cv_jpg(show_img, buff);
-            }
-*/
-            // if you run it with param -mjpeg_port 8090  then open URL in your web-browser: http://localhost:8090
-/*
-            if (mjpeg_port > 0 && show_img) {
-                int port = mjpeg_port;
-                int timeout = 400000;
-                int jpeg_quality = 40;    // 1 - 100
-                send_mjpeg(show_img, port, timeout, jpeg_quality);
-            }
-*/
-
-            while (custom_atomic_load_int(&run_detect_in_thread)) {
-                if(avg_fps > 180) this_thread_yield();
-                else this_thread_sleep_for(thread_wait_ms);   // custom_join(detect_thread, 0);
-            }
-            //if (!benchmark)
-            {
-                while (custom_atomic_load_int(&run_fetch_in_thread)) {
-                    if (avg_fps > 180) this_thread_yield();
-                    else this_thread_sleep_for(thread_wait_ms);   // custom_join(fetch_thread, 0);
-                }
-                free_image(det_s);
-            }
-/*
-            if (time_limit_sec > 0 && (get_time_point() - start_time_lim)/1000000 > time_limit_sec) {
-                printf(" start_time_lim = %f, get_time_point() = %f, time spent = %f \n", start_time_lim, get_time_point(), get_time_point() - start_time_lim);
-                break;
-            }
-*/
-            if (flag_exit == 1) break;
-
-            //if(delay == 0)
-            det_s = in_s;
+        int outputs;
+        if (net.inputs  != fv.size()) {
+            std::cout << "Inputs mismatch" <<  net.inputs  << "/" << fv.size() << std::endl;
+            break;
         }
-      //  --delay;
-        //if(delay < 0)
-        {
+        float *prediction = network_predict(net, fv.data());
+        writejsonarray(dataout, prediction, net.outputs);
+        writejsonarray(std::cout, prediction, net.outputs);
+
+        //printf("\nFPS:%.1f \t AVG_FPS:%.1f\n", fps, avg_fps);
+
+        /*
+        if(count%1000==0) {
         //    delay = frame_skip;
 
             //double after = get_wall_time();
@@ -615,14 +537,16 @@ void scantodata(const char *cfgfile, const char *weightfile,
                 frame_counter = 0;
                 start_time = get_time_point();
             }
+
         }
+         */
     }
 
 
 
 
 
-    free(avg);
+//    free(avg);
 
    // free_ptrs((void **)names, net.layers[net.n - 1].classes);
 
