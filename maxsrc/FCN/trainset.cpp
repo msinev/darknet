@@ -9,6 +9,7 @@
 #include <iostream>
 #include <network.h>
 #include <parser.h>
+#include <cmath>
 #include "darknet.h"
 #include "matrix.h"
 #include "customdata.hpp"
@@ -102,7 +103,7 @@ public:
 void trainme(const boost::filesystem::path in, const boost::filesystem::path out,
              boost::filesystem::path cfgfile, boost::filesystem::path weightfile,
              boost::filesystem::path backup_directory,
-             std::vector<int> &gpus, int classes=2)  {
+             std::vector<int> &gpus, int timescale, int classes=2)  {
 
 
     float avg_loss = -1;
@@ -259,8 +260,11 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     time = what_time_is_it_now();
 
     float loss = 0;
-    const int scale=800000;
-    const int timescale=60*2;
+    double avgloss = 100;
+    double minavgloss = MAXFLOAT;
+    int    invalidloss=0;
+    const int scale=net->max_batches;
+
     int N=0;
 
     assert(gpus.size() == 1);  // to simplify for now
@@ -295,8 +299,19 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         int repeat =20        ;
         do {
             loss = train_network(*net, train);
+            if( std::isfinite(loss) ) {
+                avgloss=(avgloss*999+loss)/1000;
+                if(avgloss<minavgloss) minavgloss=avgloss;
+            } else {
+                invalidloss++;
+            }
+
+
         } while(loss>20 && repeat-->0);
-       if (N%100==0) std::cout << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
+       if (i%1000==0) {
+           std::cout << "Min-Avg: "<< minavgloss  << "  Avg: "<< avgloss << "  Invalid:" << invalidloss <<  "  Recent:" << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
+           invalidloss=0;
+           }
 /*       if(loss <0.00001) {
            std::cout << " Loss minimized exiting "<< std::endl;
            break;
@@ -305,8 +320,8 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
        }
     
     if(avg_loss == -1) avg_loss = loss;
-    avg_loss = avg_loss*.9 + loss*.1;
-    printf("%ld, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-time, *net->seen);
+    avg_loss = avg_loss*.99 + loss*.01;
+    printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-time, *net->seen);
    // free_data(train);
 /*
     if(*net->seen/N > epoch) {
@@ -365,6 +380,7 @@ int main(int narg, char *sarg[]) {
 
     std::string cfg_path, backup_path, weight_path, in_data_path,  out_data_path;
     float thresh=40.0;
+    int timelimit=600;
     long max_loop=100000;
     po::options_description desc("options");
 
@@ -381,6 +397,7 @@ int main(int narg, char *sarg[]) {
                 ("weight,w", po::value<std::string>(&weight_path), "Weight file(s) path")
                 ("input,i", po::value<std::string>(&in_data_path), "Input data")
                 ("threshold,t", po::value<float>(&thresh),  "Threshold to stop testing 0-100%")
+                ("timelimit,s", po::value<int>(&timelimit),  "Time limit (seconds)")
                 ("expected,x", po::value<std::string>(&out_data_path), "Expected data file")
                 ("maxloop,m", po::value<long>(&max_loop), "Data output file");
 
@@ -437,7 +454,7 @@ void trainme(boost::filesystem::path cfgfile, boost::filesystem::path weightfile
 
  */
 
-    trainme(inputFile, outputFile,  networkCfg, weightFile, backupDir, gpus);
+    trainme(inputFile, outputFile,  networkCfg, weightFile, backupDir, gpus, timelimit);
 //    checkDirPath(file, "data.test", path);
     //std::cout << "Hello world\n" << "from " << root << std::endl;
     return 0;
