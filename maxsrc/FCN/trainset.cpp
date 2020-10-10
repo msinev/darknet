@@ -112,8 +112,8 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
     char *base = basecfg( (char*)cfgfile.c_str() );
 
-    printf("%s\n", base);
-    printf("%lu\n", gpus.size());
+    printf("Network: %s\n", base);
+    printf("Gpu count:  %lu\n", gpus.size());
     network **nets = (network **)calloc(gpus.size(), sizeof(network*));
 
     srand(time(0) );
@@ -125,6 +125,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     for(uint i = 0; i < gpus.size(); ++i){
         srand(seed);
 #ifdef GPU
+        std::cout << "Set gpu " << gpus[i] << std::endl;
         cuda_set_device(gpus[i]);
 #endif
         nets[i] = load_network((char*)cfgfile.c_str(), (char*)(clear?"":weightfile.c_str()), clear);
@@ -279,25 +280,35 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         return;
     }
 
+    const int K=1;
+    int learnRows=net->batch*K;
+    int inputs=net->inputs;
+    int outputs=net->outputs;
+
+    float *valsIns=new float[learnRows*inputs];
+    float *valsOuts=new float[learnRows*outputs];
+
     for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
+
         N++;
         int vIn=rand_int(0, allIn.size()-2);
         auto vin=allIn[vIn];
         auto vout=allOut[vIn];
-        float *valsIns=vin.data();
-        float *valsOuts=vout.data();
+
         if(vout.size()!=20) {
             std::cout << " -- Data wrong --\n Abort "<< std::endl;
             break;
             }
+
         train.X.cols=vin.size();
-        train.X.rows=1;
+        train.X.rows=net->batch;
         train.X.vals=&valsIns;
         train.y.cols=vout.size();
-        train.y.rows=1;
+        train.y.rows=net->batch;
         train.y.vals=&valsOuts;
-        int repeat =20        ;
-        do {
+
+       // int repeat =20        ;
+       // do {
             loss = train_network(*net, train);
             if( std::isfinite(loss) ) {
                 avgloss=(avgloss*999+loss)/1000;
@@ -305,24 +316,27 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
             } else {
                 invalidloss++;
             }
+      //  } while(loss>20 && repeat-->0);
 
-
-        } while(loss>20 && repeat-->0);
        if (i%1000==0) {
            std::cout << "Min-Avg: "<< minavgloss  << "  Avg: "<< avgloss << "  Invalid:" << invalidloss <<  "  Recent:" << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
            invalidloss=0;
            }
-/*       if(loss <0.00001) {
+
+       /*       if(loss <0.00001) {
            std::cout << " Loss minimized exiting "<< std::endl;
            break;
            }
            */
        }
-    
+
+    delete []valsIns;
+    delete []valsOuts;
+
     if(avg_loss == -1) avg_loss = loss;
     avg_loss = avg_loss*.99 + loss*.01;
     printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-time, *net->seen);
-   // free_data(train);
+    free_data(train);
 /*
     if(*net->seen/N > epoch) {
         epoch = *net->seen/N;
