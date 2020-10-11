@@ -13,6 +13,7 @@
 #include "darknet.h"
 #include "matrix.h"
 #include "customdata.hpp"
+#include "batchset.h"
 //#include "jsonset.h"
 
 extern "C" {
@@ -197,7 +198,6 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     std::ifstream outdata(out.string());
     //return;
 
-    data train;
     //data buffer;
 //    std::cout << vin.size() << ":" << vout.size() << std::endl;
     //std::vector<std::vector<boost::filesystem::path>> &im,
@@ -266,7 +266,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     int    invalidloss=0;
     const int scale=net->max_batches;
 
-    int N=0;
+    int N=1;
 
     assert(gpus.size() == 1);  // to simplify for now
     std::cerr << "Train network single GPU (repeat max "<< scale <<" times max "<<timescale<<"s)" << std::endl;
@@ -281,48 +281,44 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     }
 
     const int K=1;
-    int learnRows=net->batch*K;
+//    int learnRows=net->batch*K;
     int inputs=net->inputs;
     int outputs=net->outputs;
 
-    float *valsIns=new float[learnRows*inputs];
-    float *valsOuts=new float[learnRows*outputs];
+    batchset train(net, K);
 
     for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
 
-        N++;
-        int vIn=rand_int(0, allIn.size()-2);
-        auto vin=allIn[vIn];
-        auto vout=allOut[vIn];
 
-        if(vout.size()!=20) {
-            std::cout << " -- Data wrong --\n Abort "<< std::endl;
-            break;
-            }
 
-        train.X.cols=vin.size();
-        train.X.rows=net->batch;
-        train.X.vals=&valsIns;
-        train.y.cols=vout.size();
-        train.y.rows=net->batch;
-        train.y.vals=&valsOuts;
+        if(!train.datasetrows( [&allIn, &allOut, inputs, outputs](float *&pin, float *&pout) {
+                int vIn=rand_int(0, allIn.size()-2);
+                auto vin=allIn[vIn];
+                auto vout=allOut[vIn];
 
-       // int repeat =20        ;
-       // do {
-            loss = train_network(*net, train);
-            if( std::isfinite(loss) ) {
-                avgloss=(avgloss*999+loss)/1000;
-                if(avgloss<minavgloss) minavgloss=avgloss;
-            } else {
-                invalidloss++;
-            }
-      //  } while(loss>20 && repeat-->0);
+                if(vout.size()!=20) {
+                    std::cout << " -- Data wrong --\n Abort "<< std::endl;
+                    return false;
+                }
+                pin=vin.data();
+                pout=vout.data();
+                return true;
+                } // end of lambda expression)
+            )) break;
+
+        loss = train_network(*net, train);
+        if( std::isfinite(loss) ) {
+            avgloss=(avgloss*999+loss)/1000;
+            if(avgloss<minavgloss) minavgloss=avgloss;
+        } else {
+            invalidloss++;
+        }
 
        if (i%1000==0) {
            std::cout << "Min-Avg: "<< minavgloss  << "  Avg: "<< avgloss << "  Invalid:" << invalidloss <<  "  Recent:" << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
            invalidloss=0;
            }
-
+        N++;
        /*       if(loss <0.00001) {
            std::cout << " Loss minimized exiting "<< std::endl;
            break;
@@ -330,8 +326,8 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
            */
        }
 
-    delete []valsIns;
-    delete []valsOuts;
+//    delete []valsIns;
+//    delete []valsOuts;
 
     if(avg_loss == -1) avg_loss = loss;
     avg_loss = avg_loss*.99 + loss*.01;
