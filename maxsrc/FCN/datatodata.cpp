@@ -508,7 +508,7 @@ void scantodata(const char *cfgfile, const char *weightfile,
 
        // writejsonarray(std::cout, fv);
 
-        int outputs;
+//        int outputs;
         if (net.inputs  > fv.size()) {
             std::cout << "Inputs mismatch" <<  net.inputs  << "/" << fv.size() << std::endl;
             break;
