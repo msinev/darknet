@@ -383,7 +383,7 @@ if(OpenCV_FOUND AND OpenCV_VERSION VERSION_GREATER "3.0" AND BUILD_USELIB_TRACK 
   target_compile_definitions(dark PUBLIC TRACK_OPTFLOW=1)
 endif()
 
-add_executable(fcncbuftrain ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.cpp  maxsrc/FCN/jsonset.h maxsrc/FCN/trainset.cpp maxsrc/FCN/batchset.cpp maxsrc/FCN/batchset.h)
+add_executable(fcncbuftrain ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.cpp  maxsrc/FCN/jsonset.h maxsrc/FCN/traindenseset.cpp maxsrc/FCN/batchset.cpp maxsrc/FCN/batchset.h)
 target_include_directories(fcncbuftrain PUBLIC Boost_INCLUDE_DIR)
 target_link_libraries(fcncbuftrain PRIVATE ${Boost_LIBRARIES})
 target_link_libraries(fcncbuftrain PRIVATE ${OpenCV_LINKED_COMPONENTS})
