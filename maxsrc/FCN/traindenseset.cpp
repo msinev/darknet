@@ -297,13 +297,6 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
                 int vIn=rand_int(0, samples-1);
                 pin=sparseIn.Row(vIn);
                 pout=sparseOut.Row(vIn);
-
-/*                if(vout.size()!=20) {
-                    std::cout << " -- Data wrong --\n Abort "<< std::endl;
-                    return false;
-                }*/
-                //pin=vin.data();
-                //pout=vout.data();
                 return true;
                 } // end of lambda expression)
             )) break;
