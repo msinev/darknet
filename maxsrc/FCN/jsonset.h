@@ -20,8 +20,10 @@ struct mergeData {
     int gap;
 
     ~mergeData() {
-        if (buf)
+        if (buf!=NULL) {
             free(buf);
+            buf = NULL;
+            }
         }
 
     mergeData():buf(NULL), rowSize(0), rowsCount(0), gap(0) {    }
