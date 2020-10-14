@@ -72,8 +72,9 @@ struct rollingdata: protected mergeData {
         rowsCount=rows;
 
         slidePosition=rows;
-        if(gap!=0) memset(buf+(long)row*rows, 0, (size_t)gap*row*sizeof(float));
         buf=(float*)malloc((size_t)row*(rows+slide)*sizeof(float));
+        if(gap!=0) memset(buf+(long)row*rows, 0, (size_t)gap*row*sizeof(float));
+
         }
 
     void Print();
