@@ -288,15 +288,17 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 //    int learnRows=net->batch*K;
 
     batchset train(net, K);
+    std::set<int> setf(begin(allOutDense), end(allOutDense));
 
     for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
 
 
 
-        if(!train.datasetrows( [samples, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
-                int vIn=rand_int(0, samples-1);
-                pin=sparseIn.Row(vIn);
-                pout=sparseOut.Row(vIn);
+        if(!train.datasetrows( [samples, &setf, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
+                int vIn=rand_int(20, +20);
+                int vIn2=rand_int(0, setf.size());
+                pin=sparseIn.Row(vIn+vIn2);
+                pout=sparseOut.Row(vIn+vIn2);
                 return true;
                 } // end of lambda expression)
             )) break;

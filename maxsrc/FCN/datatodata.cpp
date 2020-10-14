@@ -515,6 +515,9 @@ void scantodatasparse(const char *cfgfile, const char *weightfile,
 //    double start_time = get_time_point();
 //    float avg_fps = 0;
 //    int frame_counter = 0;
+
+ //   ./data2data -c model.cfg -w test.weights -r 30 -b 20 -l 100 -i ./V008.mp4.json -j promise.json
+
     std::vector<float> fv;
 
     std::cout << "Inputs " <<  net.inputs   << std::endl;
