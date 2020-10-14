@@ -61,11 +61,20 @@ void scantodata(const char *cfgfile,
                 const char *in_filename,
                 const char *out_filename);
 
+void scantodatasparse(const char *cfgfile,
+                const char *weightfile,
+                const char *in_filename,
+                const char *out_filename,
+                int rowSize,
+                int historyRows,
+                int sliderLoop=100);
+
 int main(int narg, char **sarg) {
     //
     std::cout << "To data scan" << std::endl;
     //
     namespace po = boost::program_options;
+
 /*
     scantodata( const char *filename, char **names, int classes,
     int frame_skip, char *prefix,  int dont_show, int ext_output,
@@ -73,6 +82,9 @@ int main(int narg, char **sarg) {
     std::string cfg_path,      weight_path,
                 in_data_path,  out_data_path;
     int out_width;
+    int rowInputSize=0;
+    int rowsHistory=0;
+    int slider=100;
 
     //classSet classes;
     po::options_description desc("options");
@@ -92,6 +104,9 @@ int main(int narg, char **sarg) {
                 ("weight,w", po::value<std::string>(&weight_path), "Weight file path")
                 //("map,m", po::value<std::string>(&class_map_path), "Class map")
                 ("outwidth,u", po::value<int>(&out_width),  "Threshold probability in percents 0-100")
+                ("datarow,r", po::value<int>(&rowInputSize),  "Row inpits")
+                ("history,b", po::value<int>(&rowsHistory),  "Rows history")
+                ("loop,l", po::value<int>(&slider),  "Loop preriod")
                 ("indata,i", po::value<std::string>(&in_data_path), "Video input file")
                 ("outdata,j", po::value<std::string>(&out_data_path), "Data output file");
 
@@ -117,10 +132,12 @@ int main(int narg, char **sarg) {
         std::cout << ex.what() << std::endl;
         return 2;
         }
-
-    scantodata(cfg_path.c_str(),weight_path.c_str(),
-              in_data_path.c_str(), out_data_path.c_str() );
-
+    if(rowsHistory)
+       scantodatasparse(cfg_path.c_str(),weight_path.c_str(),
+              in_data_path.c_str(), out_data_path.c_str(), rowInputSize, rowsHistory, slider);
+    else {
+        std::cout << "Only sparse data today" << std::endl;
+    }
 /*
     scantodata( cfg_path.c_str(), weight_path.c_str(), thresh/100.,
                      in_data_path.c_str() , classes.names , classes.classes,
@@ -400,9 +417,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, float hier_thresh, int 
 }
 */
 
-void scantodata(const char *cfgfile, const char *weightfile,
+void scantodatasparse(const char *cfgfile, const char *weightfile,
                 const char *in_filename,
-                const char *out_filename)  {
+                const char *out_filename, int rowSize, int historyRows, int sliderLoop)  {
 
 
     //int benchmark,
@@ -461,8 +478,8 @@ void scantodata(const char *cfgfile, const char *weightfile,
         error("Couldn't connect to webcam.\n");
     }
 */
-    layer l = net.layers[net.n-1];
-    int j;
+//    layer l = net.layers[net.n-1];
+//    int j;
 
 //    avg = (float *) calloc(l.outputs, sizeof(float));
 
@@ -494,14 +511,22 @@ void scantodata(const char *cfgfile, const char *weightfile,
 
 //    int send_http_post_once = 0;
 //    const double start_time_lim = get_time_point();
-    double before = get_time_point();
-    double start_time = get_time_point();
-    float avg_fps = 0;
-    int frame_counter = 0;
+//    double before = get_time_point();
+//    double start_time = get_time_point();
+//    float avg_fps = 0;
+//    int frame_counter = 0;
     std::vector<float> fv;
 
     std::cout << "Inputs " <<  net.inputs   << std::endl;
     std::cout << "Outputs " <<  net.outputs << std::endl;
+    rollingdata idata;
+
+
+    idata.Allocate(rowSize, historyRows, sliderLoop);
+    if (rowSize*historyRows  != net.inputs) {
+        std::cout << "Network inputs mismatch" <<  net.inputs  << "/" << rowSize*historyRows << std::endl;
+        return;
+    }
 
     while(datain && readjsonarray(datain, fv) ){
         ++count;
@@ -509,11 +534,12 @@ void scantodata(const char *cfgfile, const char *weightfile,
        // writejsonarray(std::cout, fv);
 
 //        int outputs;
-        if (net.inputs  > fv.size()) {
+        if (rowSize  != fv.size()) {
             std::cout << "Inputs mismatch" <<  net.inputs  << "/" << fv.size() << std::endl;
             break;
         }
-        float *prediction = network_predict(net, fv.data());
+        idata.Append(fv.data());
+        float *prediction = network_predict(net, idata.Data());
         writejsonarray(dataout, prediction, net.outputs);
         writejsonarray(std::cout, prediction, net.outputs);
 

@@ -33,7 +33,7 @@ struct mergeData {
         if(gap!=0) memset(buf+(long)row*rows, 0, (size_t)gap*row*sizeof(float));
     }
 
-    mergeData(mergeData &&r):buf(r.buf), rowSize(r.rowSize), gap(r.gap), rowsCount(r.rowsCount) {
+    mergeData(mergeData &&r): buf(r.buf), rowSize(r.rowSize),  rowsCount(r.rowsCount), gap(r.gap)  {
         r.buf=NULL;
         r.rowsCount=0;
     }
@@ -50,27 +50,29 @@ private:
 
 struct rollingdata: protected mergeData {
 
-    int slideStep;
+
     long slidePosition;
 
     ~rollingdata() {
         }
 
     void Append(float *row) {
-        if(slidePosition==slideStep+rowsCount) {
-            memcpy(&buf[0], &buf[(slideStep+1)*rowSize], rowSize*(rowsCount-1)*sizeof(float) );
-            slidePosition=rowsCount-1;
+        if(slidePosition==0) {
+            memmove(&buf[rowsCount*rowSize], &buf[0], rowSize*gap*sizeof(float) );
+            slidePosition=rowsCount;
             }
-        memcpy(&buf[(slidePosition++)*rowSize], row, rowSize*sizeof(float) );
+        memcpy(&buf[(--slidePosition)*rowSize], row, rowSize*sizeof(float) );
         }
+
+    float *Data() { return &buf[slidePosition*rowSize]; }
 //protected:
     void Allocate(int row, int rows, int slide=100) {  // Hiding supertype
         gap=slide;
         rowSize=row;
         rowsCount=rows;
-        slideStep=slide;
-        slidePosition=0;
 
+        slidePosition=rows;
+        if(gap!=0) memset(buf+(long)row*rows, 0, (size_t)gap*row*sizeof(float));
         buf=(float*)malloc((size_t)row*(rows+slide)*sizeof(float));
         }
 
