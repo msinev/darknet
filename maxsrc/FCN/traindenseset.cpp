@@ -285,16 +285,16 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         std::cerr << "No input data" << std::endl;
         return;
     } else {
-        std::cout << samples << "inputs loaded" << std::endl;
+        std::cout << samples << "  inputs loaded" << std::endl;
     }
 
     int samplerow=allInDense[0].size();
     if(samplerow==0 || (inputs % samplerow)!=0) {
-        std::cerr << "Invalid row data" << samplerow << std::endl;
+        std::cerr << "Invalid row data " << samplerow << std::endl;
         return;
         }
     else {
-        std::cout << samplerow << "inputs in each row sample" << std::endl;
+        std::cout << samplerow << " inputs in each row sample" << std::endl;
     }
     auto sparseIn=mergeVectorRev(allInDense, inputs/samplerow);
 
@@ -306,14 +306,15 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     const int K=1;  // number of batches in one go
 //    int learnRows=net->batch*K;
 
-    batchset train(net, K);
+    batchset traindatabatch(net, K);
+
     std::set<int> setf(begin(allOutDense), end(allOutDense));
 
     double saveat=ftime;
     for(int i=0; i<scale  && (what_time_is_it_now()-ftime)<timescale; i++) {
 
-        if(!train.datasetrows( [samples, &setf, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
-                int vIn=rand_int(20, +20);
+        if(!traindatabatch.datasetrows( [samples, &setf, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
+                int vIn=rand_int(2, -2);
                 int vIn2=rand_int(0, setf.size());
                 pin=sparseIn.Row(vIn+vIn2);
                 pout=sparseOut.Row(vIn+vIn2);
@@ -321,7 +322,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
                 } // end of lambda expression)
             )) break;
 
-        loss = train_network(*net, train);
+        loss = train_network(*net, traindatabatch);
         if( std::isfinite(loss) ) {
             avgloss=(avgloss*999+loss)/1000;
             if(avgloss<minavgloss) minavgloss=avgloss;
@@ -353,7 +354,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     if(avg_loss == -1) avg_loss = loss;
     avg_loss = avg_loss*.99 + loss*.01;
     printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-ftime, *net->seen);
-    free_data(train);
+    //free_data(train);
 /*
     if(*net->seen/N > epoch) {
         epoch = *net->seen/N;
@@ -372,7 +373,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
     //sprintf(buff, "%s/%s.weights", backup_directory.c_str(), base);
 //    pthread_join(load_thread, 0);
-    std::cout << samplerow << "inputs in each row sample" << std::endl;
+
     {
         char buf[128];
         sprintf(buf, "%s.final", trainid);
