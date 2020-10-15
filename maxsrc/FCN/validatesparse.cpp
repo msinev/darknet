@@ -25,7 +25,7 @@ int main(int nargs, char *sarg[]) {
     int N=0, i;
     i=0;
     while(datain && readjsonarray(datain, fv) ){
-      N++;
+
       if(i>=v.size()) break;
       if(v[i]<N+5) {
         if  (v[i]==N) {
@@ -41,6 +41,7 @@ int main(int nargs, char *sarg[]) {
           i++;
 
         }
+        N++;
       }
 
     return 0;
