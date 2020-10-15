@@ -1,0 +1,35 @@
+//
+// Created by max on 19.09.2020.
+//
+
+#include "jsonset.h"
+#include <iostream>
+
+int main(int nargs, char *sarg[]) {
+    //
+    if(nargs!=3) {
+        std::cout << "CMD [in.sparse] [in.out]"  << std::endl;
+        return 1;
+        }
+    std::ifstream datain(sarg[2]);
+    std::ifstream indexin(sarg[1]);
+
+    std::vector<int> v;
+    std::vector<float> fv;
+    if(!indexin || !readjsonarrayint(indexin, v) ) {
+      std::cout << "Index error" << std::endl;
+      return 2;
+      }
+
+    int N, i;
+    i=0;
+    while(datain && readjsonarray(datain, fv) ){
+      N++;
+      if(v[i]<N+5) {
+        std::cout << N << " :" << fv[0] << " - " << fv[1] << std::endl;
+        }
+      if(v[i]>N-5) i++
+      }
+
+    return 0;
+}

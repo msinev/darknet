@@ -29,6 +29,7 @@
 
 int main() {
     //
+
     std::vector<int> v={0,3,4,6,8};
     auto s=makeSparseVectorRev(v, 10,2);
     s.Print(std::cout);
