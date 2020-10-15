@@ -315,12 +315,12 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     if (sparseIn.rowsCount != sparseOut.rowsCount) {
         std::cerr << "sparseIn.rowsCount != sparseOut.rowsCount" << std::endl;
     }
-    volatile int sparse=0;
+    //volatile int sparse=0;
     for(int i=0; i<scale  && (what_time_is_it_now()-ftime)<timescale; i++) {
 
-        if(!traindatabatch.datasetrows( [&sparse, &allOutDense,  samples, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
-                sparse++;
-                if(rand_int(0, 10)>3) {
+        if(!traindatabatch.datasetrows( [&allOutDense,  samples, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
+                //sparse++;
+                if(rand_int(0, 100)>3) {
                     int vIn = rand_int(2, -2);
                     int vIn2 = allOutDense[rand_int(0, allOutDense.size() - 1)];
                     pin = sparseIn.RowOrig(vIn + vIn2);
