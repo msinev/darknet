@@ -10,6 +10,7 @@
 #include <network.h>
 #include <parser.h>
 #include <cmath>
+#include <ctime>
 #include "darknet.h"
 #include "matrix.h"
 #include "customdata.hpp"
@@ -167,7 +168,6 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     //char **paths = (char **)list_to_array(plist);
     //printf("%d\n", plist->size);
 
-    double time;
 
     /*load_args args = {0};
     args.w = net->w;
@@ -255,10 +255,13 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
     //      load_thread = load_data(args);
 
+   // double ftime;
 
-    time = what_time_is_it_now();
-    printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
-    time = what_time_is_it_now();
+   // ftime = what_time_is_it_now();
+    //printf("Loaded: %lf seconds\n", what_time_is_it_now()-time);
+   double ftime = what_time_is_it_now();
+    char trainid[256];
+    sprintf(trainid, "%ld", (long)time(0));
 
     float loss = 0;
     double avgloss = 100;
@@ -275,9 +278,25 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     std::cerr << "Train network single GPU (repeat max "<< scale <<" times max "<<timescale<<"s)" << std::endl;
 
     std::vector<std::vector<float>> allInDense;
-    int samples=allInDense.size();
+
     readjsonarrays(indata, allInDense);
-    auto sparseIn=mergeVectorRev(allInDense, inputs/allInDense[0].size());
+    int samples=allInDense.size();
+    if(samples==0) {
+        std::cerr << "No input data" << std::endl;
+        return;
+    } else {
+        std::cout << samples << "inputs loaded" << std::endl;
+    }
+
+    int samplerow=allInDense[0].size();
+    if(samplerow==0 || (inputs % samplerow)!=0) {
+        std::cerr << "Invalid row data" << samplerow << std::endl;
+        return;
+        }
+    else {
+        std::cout << samplerow << "inputs in each row sample" << std::endl;
+    }
+    auto sparseIn=mergeVectorRev(allInDense, inputs/samplerow);
 
     std::vector<int>  allOutDense;
     readjsonarray(outdata, allOutDense);
@@ -290,9 +309,8 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     batchset train(net, K);
     std::set<int> setf(begin(allOutDense), end(allOutDense));
 
-    for(int i=0; i<scale  && (what_time_is_it_now()-time)<timescale; i++) {
-
-
+    double saveat=ftime;
+    for(int i=0; i<scale  && (what_time_is_it_now()-ftime)<timescale; i++) {
 
         if(!train.datasetrows( [samples, &setf, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
                 int vIn=rand_int(20, +20);
@@ -312,15 +330,21 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         }
 
        if (i%1000==0) {
-           std::cout << "Min-Avg: "<< minavgloss  << "  Avg: "<< avgloss << "  Invalid:" << invalidloss <<  "  Recent:" << loss << " at "  << i << " by " <<what_time_is_it_now()-time  << "s" << std::endl;
+           std::cout << "Min-Avg: "<< minavgloss  << "  Avg: "<< avgloss << "  Invalid:" << invalidloss <<  "  Recent:" << loss << " at "  << i << " by " <<what_time_is_it_now()-ftime  << "s" << std::endl;
            invalidloss=0;
+           double tnow=what_time_is_it_now();
+           if(tnow-saveat>10.) {
+               char buf[128];
+               sprintf(buf, "%s.%ld", trainid, long(tnow-saveat));
+               auto newpath = backup_directory / buf;
+               std::cout << "Saving weights: " << newpath << std::endl;
+               save_weights(*net, (char *) (newpath).c_str());
+               saveat=tnow;
+               }
+
            }
         N++;
-       /*       if(loss <0.00001) {
-           std::cout << " Loss minimized exiting "<< std::endl;
-           break;
-           }
-           */
+
        }
 
 //    delete []valsIns;
@@ -328,7 +352,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
 
     if(avg_loss == -1) avg_loss = loss;
     avg_loss = avg_loss*.99 + loss*.01;
-    printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-time, *net->seen);
+    printf("%d, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(*net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(*net), what_time_is_it_now()-ftime, *net->seen);
     free_data(train);
 /*
     if(*net->seen/N > epoch) {
@@ -337,23 +361,28 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
         sprintf(buff, "%s/%s_%d.weights",backup_directory.c_str(),base, epoch);
         save_weights(*net, buff);
     }*/
-    if(get_current_batch(*net)%1000 == 0){
-        char buff[256];
-        sprintf(buff, "%s/%s.backup",backup_directory.c_str(),base);
-        save_weights(*net, buff);
-    }
+    //if(get_current_batch(*net)%1000 == 0){
+    //    char buff[256];
+    //    sprintf(buff, "%s/%s.backup",backup_directory.c_str(),base);
+    //    save_weights(*net, buff);
+    //}
 
 
     //char buff[256];
 
     //sprintf(buff, "%s/%s.weights", backup_directory.c_str(), base);
 //    pthread_join(load_thread, 0);
-    auto newpath=backup_directory/(weightfile.filename().string()+".new");
-    std::cout << "Saving file: " << newpath << std::endl;
-    save_weights(*net, (char*)(newpath).c_str());
+    std::cout << samplerow << "inputs in each row sample" << std::endl;
+    {
+        char buf[128];
+        sprintf(buf, "%s.final", trainid);
+        auto newpath = backup_directory / buf;
+        std::cout << "Saving weights: " << newpath << std::endl;
+        save_weights(*net, (char *) (newpath).c_str());
+    }
     free_network(*net);
     //free_list(plist);
-    free(base);
+   // free(base);
 }
 
 static bool IsFile(boost::filesystem::path &path, std::string spath) {
