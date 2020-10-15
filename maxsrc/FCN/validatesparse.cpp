@@ -4,6 +4,7 @@
 
 #include "jsonset.h"
 #include <iostream>
+#include <fstream>
 
 int main(int nargs, char *sarg[]) {
     //
@@ -16,7 +17,7 @@ int main(int nargs, char *sarg[]) {
 
     std::vector<int> v;
     std::vector<float> fv;
-    if(!indexin || !readjsonarrayint(indexin, v) ) {
+    if(!indexin || !readjsonarray(indexin, v) ) {
       std::cout << "Index error" << std::endl;
       return 2;
       }
@@ -35,7 +36,7 @@ int main(int nargs, char *sarg[]) {
         }
         std::cout << N << " :" << fv[0] << " - " << fv[1] << std::endl;
         }
-      if(v[i]>N-5) i++
+      if(v[i]>N-5) i++;
       }
 
     return 0;
