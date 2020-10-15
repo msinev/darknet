@@ -74,7 +74,7 @@ struct rollingdata: protected mergeData {
         memcpy(&buf[(--slidePosition)*rowSize], row, rowSize*sizeof(float) );
         }
 
-    const float *Data() { return &buf[slidePosition*rowSize]; }
+    float *Data() { return &buf[slidePosition*rowSize]; }
 //protected:
     void Allocate(int row, int rows, int slide=100) {  // Hiding supertype
         gap=slide;
