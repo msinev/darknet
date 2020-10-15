@@ -318,7 +318,7 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     volatile int sparse=0;
     for(int i=0; i<scale  && (what_time_is_it_now()-ftime)<timescale; i++) {
 
-        if(!traindatabatch.datasetrows( [&allOutDense,  samples, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
+        if(!traindatabatch.datasetrows( [&sparse, &allOutDense,  samples, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
                 sparse++;
                 if(rand_int(0, 10)>3) {
                   int vIn=rand_int(3, -3);
