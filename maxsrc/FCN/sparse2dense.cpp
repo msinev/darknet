@@ -11,7 +11,7 @@
 int main(int nargs, char *sarg[]) {
     //
     if(nargs!=3 && nargs!=2) {
-        std::cout << "CMD [in.out] [threshold e.g .9] "  << std::endl;
+        std::cout << "CMD [in.out] [threshold e.g .9]"  << std::endl;
         return 1;
         }
 
@@ -48,6 +48,6 @@ int main(int nargs, char *sarg[]) {
 
         N++;
       }
-    std::cout << "]\n" << x << std::endl;
+    std::cout << "]" << std::endl;
     return 0;
 }
