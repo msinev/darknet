@@ -26,7 +26,7 @@ int main(int nargs, char *sarg[]) {
 
     std::vector<float> fv;
     if(nargs>2) {
-        th=std::stod(std::string(sarg[3]));
+        th=std::stod(std::string(sarg[2]));
         std::cout << "set threshold " << th << std::endl;
       }
 
