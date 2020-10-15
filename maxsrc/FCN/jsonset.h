@@ -45,11 +45,18 @@ struct mergeData {
     }
 
     inline float *Row(int n) {
-      if (n>=(rowsCount+gap)) {
+      if (n>=rowsCount) {
         std::cerr << "Access row after end of buffer" << std::endl;
         }
       return buf+rowSize*n;
       }
+
+    inline float *RowOrig(int n) {
+        if (n>=rowsCount) {
+            std::cerr << "Access row after end of buffer" << std::endl;
+        }
+        return buf+rowSize*(rowsCount-n);
+    }
 
     void Print(std::ostream &os);
 
