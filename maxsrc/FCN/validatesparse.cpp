@@ -22,7 +22,7 @@ int main(int nargs, char *sarg[]) {
       return 2;
       }
 
-    int N, i;
+    int N=0, i;
     i=0;
     while(datain && readjsonarray(datain, fv) ){
       N++;
