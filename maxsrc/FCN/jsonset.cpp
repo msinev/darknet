@@ -24,24 +24,24 @@ bool readjsonarrays(std::istream &data, std::vector<std::vector<float>> &vect){
     return true;
 }
 
-void mergeData::Print() {
+void mergeData::Print(std::ostream &s) {
     // std::cout << slidePosition << std::endl;
 
     for(long i=0; i<rowsCount+gap; i++) {
 
-        std::cout << "[";
+        s << "[";
         for(long j=0; j<rowSize; j++) {
             //
-            if(j) std::cout << ",";
-            std::cout << buf[i*rowSize+j];
+            if(j) s << ",";
+            s << buf[i*rowSize+j];
         }
-        std::cout << "]" << std::endl;
+        s << "]" << std::endl;
 
     }
 }
 
 
-void rollingdata::Print() {
+void rollingdata::Print(std::ostream &s) {
 
     long r0=std::max(0l, slidePosition-rowsCount);
     long r1=std::max(slidePosition, rowsCount);
@@ -49,13 +49,13 @@ void rollingdata::Print() {
 
     for(long i=r0; i<r1; i++) {
 
-        std::cout << "[";
+        s << "[";
         for(long j=0; j<rowSize; j++) {
             //
-            if(j) std::cout << ",";
-            std::cout << buf[i*rowSize+j];
+            if(j) s << ",";
+            s << buf[i*rowSize+j];
         }
-        std::cout << "]" << std::endl;
+        s << "]" << std::endl;
 
     }
 }

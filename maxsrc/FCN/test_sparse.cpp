@@ -31,7 +31,7 @@ int main() {
     //
     std::vector<int> v={0,3,4,6,8};
     auto s=makeSparseVectorRev(v, 10,2);
-    s.Print();
+    s.Print(std::cout);
     std::cout << "---" <<  std::endl;
     //
     std::vector<float> s1={1.1,1.,2.};
@@ -42,5 +42,5 @@ int main() {
     std::vector<std::vector<float>> ss={s1,s3,s3,s4};
     auto k=mergeVectorRev(ss,3);
 
-    k.Print();
+    k.Print(std::cout);
 }

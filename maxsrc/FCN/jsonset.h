@@ -21,13 +21,17 @@ struct mergeData {
 
     ~mergeData() {
         if (buf!=NULL) {
-            free(buf);
-            buf = NULL;
-            }
+           free(buf);
+           buf = NULL;
+           }
         }
 
     mergeData():buf(NULL), rowSize(0), rowsCount(0), gap(0) {    }
+
     void Allocate(int row, int rows, int gap_=0) {
+        if(buf!=NULL) {
+            std::cerr << "Re-allocation!!!" << std::endl;
+        }
         rowSize=row;
         rowsCount=rows;
         gap=gap_;
@@ -39,11 +43,15 @@ struct mergeData {
         r.buf=NULL;
         r.rowsCount=0;
     }
+
     inline float *Row(int n) {
+      if (n>=(rowsCount+gap)) {
+        std::cerr << "Access row after end of buffer" << std::endl;
+        }
       return buf+rowSize*n;
       }
 
-    void Print();
+    void Print(std::ostream &os);
 
 private:
     mergeData(const mergeData& other);  // must not copy huge data
@@ -66,7 +74,7 @@ struct rollingdata: protected mergeData {
         memcpy(&buf[(--slidePosition)*rowSize], row, rowSize*sizeof(float) );
         }
 
-    float *Data() { return &buf[slidePosition*rowSize]; }
+    const float *Data() { return &buf[slidePosition*rowSize]; }
 //protected:
     void Allocate(int row, int rows, int slide=100) {  // Hiding supertype
         gap=slide;
@@ -79,7 +87,7 @@ struct rollingdata: protected mergeData {
 
         }
 
-    void Print();
+    void Print(std::ostream &os);
 
 };
 
