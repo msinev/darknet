@@ -306,6 +306,7 @@ endif()
 
 # add_executable(fcncbuftest ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.cpp ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.h maxsrc/FCN/test_set.cpp)
 add_executable(sparsetest ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.cpp ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.h maxsrc/FCN/validatesparse.cpp)
+add_executable(sparse2dense ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.cpp ${CMAKE_CURRENT_LIST_DIR}/maxsrc/FCN/jsonset.h maxsrc/FCN/sparse2dense.cpp)
 
 add_executable(uselib ${CMAKE_CURRENT_LIST_DIR}/src/yolo_console_dll.cpp)
 if(BUILD_AS_CPP)

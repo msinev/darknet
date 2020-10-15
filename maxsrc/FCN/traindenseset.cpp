@@ -315,13 +315,22 @@ void trainme(const boost::filesystem::path in, const boost::filesystem::path out
     if (sparseIn.rowsCount != sparseOut.rowsCount) {
         std::cerr << "sparseIn.rowsCount != sparseOut.rowsCount" << std::endl;
     }
+    volatile int sparse=0;
     for(int i=0; i<scale  && (what_time_is_it_now()-ftime)<timescale; i++) {
 
         if(!traindatabatch.datasetrows( [&allOutDense,  samples, &sparseIn, &sparseOut, inputs, outputs](float *&pin, float *&pout) {
-                int vIn=rand_int(2, -2);
-                int vIn2=allOutDense[rand_int(0, allOutDense.size()-1)];
-                pin=sparseIn.RowOrig(vIn+vIn2);
-                pout=sparseOut.RowOrig(vIn+vIn2);
+                sparse++;
+                if(rand_int(0, 10)>3) {
+                  int vIn=rand_int(3, -3);
+                  int vIn2=allOutDense[rand_int(0, allOutDense.size()-1)];
+                  pin=sparseIn.RowOrig(vIn+vIn2);
+                  pout=sparseOut.RowOrig(vIn+vIn2);
+                else {
+                   int vIn=rand_int(0, sparseIn.rowsCount-1);
+                   pin=sparseIn.RowOrig(vIn);
+                   pout=sparseOut.RowOrig(vIn);
+                }
+
                 //outout << vIn2<< ":" << vIn << ":[" << pout[0] <<", "<< pout[1] << "]"<<  std::endl;
                 return true;
                 } // end of lambda expression)
