@@ -27,7 +27,7 @@ int main(int nargs, char *sarg[]) {
     while(datain && readjsonarray(datain, fv) ){
       N++;
       if(i>=v.size()) break;
-      if(v[i]<N-5) {
+      if(v[i]<N+5) {
         if  (v[i]==N) {
 
             std::cout << N << "* :" << fv[0] << " * " << fv[1] << std::endl;
@@ -37,7 +37,7 @@ int main(int nargs, char *sarg[]) {
         }
         //std::cout << N << " :" << fv[0] << " - " << fv[1] << std::endl;
         }
-      if(v[i]<N+5) {
+      if(v[i]<N-5) {
           i++;
 
         }
