@@ -21,7 +21,7 @@ struct mergeData {
 
     ~mergeData() {
         if (buf!=NULL) {
-           free(buf);
+ //          free(buf);
            buf = NULL;
            }
         }
